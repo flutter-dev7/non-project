@@ -6,6 +6,8 @@ public interface IProductRepository
 {
     Task<Product?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
+    Task<List<Product>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default);
+
     Task<List<Product>> GetActiveAsync(CancellationToken ct = default);
 
     Task<(List<Product> Items, int TotalCount)> GetPagedAsync(

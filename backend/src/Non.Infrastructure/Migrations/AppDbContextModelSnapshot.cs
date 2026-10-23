@@ -25,7 +25,6 @@ namespace Non.Infrastructure.Migrations
             modelBuilder.Entity("Non.Domain.Entities.Order", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("CourierId")
@@ -76,7 +75,6 @@ namespace Non.Infrastructure.Migrations
             modelBuilder.Entity("Non.Domain.Entities.OrderItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -107,7 +105,6 @@ namespace Non.Infrastructure.Migrations
             modelBuilder.Entity("Non.Domain.Entities.OrderStatusHistory", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("ChangedAt")

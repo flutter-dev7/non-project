@@ -1,0 +1,22 @@
+using Microsoft.EntityFrameworkCore;
+using Non.Application.Interfaces.Repositories;
+using Non.Infrastructure.Persistence.Data;
+
+namespace Non.Infrastructure.Repositories;
+
+public class SettingRepository : ISettingRepository
+{
+    private readonly AppDbContext _context;
+
+    public SettingRepository(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public Task<string?> GetValueAsync(string key, CancellationToken ct = default) =>
+        _context.Settings
+            .AsNoTracking()
+            .Where(s => s.Key == key)
+            .Select(s => (string?)s.Value)
+            .FirstOrDefaultAsync(ct);
+}

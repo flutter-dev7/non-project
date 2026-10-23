@@ -53,6 +53,12 @@ public class ProductRepository : IProductRepository
         return _context.Products.AnyAsync(
             p => p.Name.ToLower() == lowered && (excludeId == null || p.Id != excludeId), ct);
     }
+    
+    public Task<List<Product>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default) =>
+        _context.Products
+            .AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .ToListAsync(ct);
 
     public async Task AddAsync(Product product, CancellationToken ct = default)
     {

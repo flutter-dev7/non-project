@@ -10,6 +10,7 @@ public class OrderStatusHistoryConfiguration : IEntityTypeConfiguration<OrderSta
     {
         builder.ToTable("OrderStatusHistories");
         builder.HasKey(h => h.Id);
+        builder.Property(h => h.Id).ValueGeneratedNever();
 
         builder.HasOne(h => h.ChangedByUser)
             .WithMany()

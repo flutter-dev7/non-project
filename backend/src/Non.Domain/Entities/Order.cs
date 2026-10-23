@@ -70,19 +70,31 @@ public class Order : BaseEntity
         TotalAmount = Items.Sum(i => i.LineTotal);
     }
 
-    public void ChangeStatus(OrderStatus newStatus)
+    public void RecordStatus(Guid changedByUserId)
+    {
+        StatusHistory.Add(new OrderStatusHistory
+        {
+            OrderId = Id,
+            Status = Status,
+            ChangedByUserId = changedByUserId
+        });
+    }
+
+    public void ChangeStatus(OrderStatus newStatus, Guid changedByUserId)
     {
         if (!AllowedTransitions[Status].Contains(newStatus))
             throw new DomainException($"Нельзя изменить статус заказа с {Status} на {newStatus}.");
 
         Status = newStatus;
+        RecordStatus(changedByUserId);
     }
 
-    public void Cancel()
+    public void Cancel(Guid changedByUserId)
     {
         if (!CanBeCancelled)
             throw new DomainException("Заказ нельзя отменить после начала выпечки.");
 
         Status = OrderStatus.Cancelled;
+        RecordStatus(changedByUserId);
     }
 }

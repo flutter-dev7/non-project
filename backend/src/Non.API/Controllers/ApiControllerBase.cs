@@ -10,6 +10,16 @@ public abstract class ApiControllerBase : ControllerBase
 {
     protected Guid CurrentUserId =>
         Guid.TryParse(User.FindFirstValue("sub"), out var id) ? id : Guid.Empty;
+    
+    protected CurrentUser Caller
+    {
+        get
+        {
+            var role = Enum.TryParse<UserRole>(User.FindFirstValue("role"), out var parsed) ? parsed : default;
+
+            return new CurrentUser(CurrentUserId, role);
+        }
+    }
 
     protected IActionResult ToActionResult(Result result)
     {

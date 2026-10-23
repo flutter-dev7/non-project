@@ -3,6 +3,7 @@ namespace Non.Application.Common;
 public static class CacheKeys
 {
     public const string ActiveProducts = "products:active";
+    public const string OrderCutoffTime = "settings:order-cutoff-time";
 
     public static string Product(Guid id) => $"products:{id}";
 

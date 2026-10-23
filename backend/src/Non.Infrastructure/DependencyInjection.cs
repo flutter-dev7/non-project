@@ -36,6 +36,13 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IShopService, ShopService>();
+        
+        services.AddSingleton(TimeProvider.System);
+
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<ISettingRepository, SettingRepository>();
+
+        services.AddScoped<IOrderService, OrderService>();
 
         return services;
     }

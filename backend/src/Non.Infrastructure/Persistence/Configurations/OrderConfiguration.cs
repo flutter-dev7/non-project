@@ -10,6 +10,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
     {
         builder.ToTable("Orders");
         builder.HasKey(o => o.Id);
+        builder.Property(o => o.Id).ValueGeneratedNever();
 
         builder.Ignore(o => o.CanBeCancelled);
         builder.Ignore(o => o.CountsAsDebt);
@@ -44,5 +45,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(o => new { o.ShopId, o.Status });
         builder.HasIndex(o => o.DeliveryDate);
+        builder.HasIndex(o => o.CourierId);
     }
 }

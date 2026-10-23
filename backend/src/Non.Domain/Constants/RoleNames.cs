@@ -10,4 +10,6 @@ public static class RoleNames
     public const string Shop = nameof(UserRole.Shop);
 
     public const string AdminOrAgent = Admin + "," + Agent;
+    public const string AdminOrCourier = Admin + "," + Courier;
+    public const string OrderCreators = Shop + "," + Agent + "," + Admin;
 }
