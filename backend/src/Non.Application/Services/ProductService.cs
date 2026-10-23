@@ -4,6 +4,7 @@ using Non.Application.DTOs.Products.Response;
 using Non.Application.Interfaces.Repositories;
 using Non.Application.Interfaces.Services;
 using Non.Domain.Entities;
+using Non.Domain.Enums;
 
 namespace Non.Application.Services;
 

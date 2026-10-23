@@ -21,5 +21,7 @@ public class ShopConfiguration : IEntityTypeConfiguration<Shop>
             .WithMany()
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(s => s.UserId).IsUnique();
     }
 }

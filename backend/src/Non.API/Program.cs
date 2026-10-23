@@ -1,14 +1,33 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Non.API.Middleware;
 using Non.API.OpenApi;
 using Non.Application.Common;
+using Non.Domain.Enums;
 using Non.Infrastructure;
 using Non.Infrastructure.Persistence.Seeds;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var messages = context.ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Неверный формат данных." : e.ErrorMessage)
+                .Distinct();
+
+            var result = Result.Failure(string.Join(" ", messages), ErrorType.Validation);
+
+            return new BadRequestObjectResult(result);
+        };
+    })
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -44,6 +63,8 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 await DbSeeder.SeedAsync(app.Services);
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

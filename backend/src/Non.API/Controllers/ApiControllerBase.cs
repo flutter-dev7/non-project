@@ -1,26 +1,45 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Non.Application.Common;
+using Non.Domain.Enums;
 
 namespace Non.API.Controllers;
 
 [ApiController]
 public abstract class ApiControllerBase : ControllerBase
 {
+    protected Guid CurrentUserId =>
+        Guid.TryParse(User.FindFirstValue("sub"), out var id) ? id : Guid.Empty;
+
+    protected IActionResult ToActionResult(Result result)
+    {
+        return StatusCode(GetStatusCode(result), result);
+    }
+
     protected IActionResult ToActionResult<T>(Result<T> result)
     {
-        return result.IsSuccess ? Ok(result.Value) : ToErrorResult(result);
+        return StatusCode(GetStatusCode(result), result);
     }
 
     protected IActionResult ToErrorResult(Result result)
     {
-        var body = new { error = result.Error };
+        return StatusCode(GetStatusCode(result), result);
+    }
+
+    private static int GetStatusCode(Result result)
+    {
+        if (result.IsSuccess)
+            return StatusCodes.Status200OK;
 
         return result.ErrorType switch
         {
-            ErrorType.NotFound => NotFound(body),
-            ErrorType.Conflict => Conflict(body),
-            ErrorType.TooManyRequests => StatusCode(StatusCodes.Status429TooManyRequests, body),
-            _ => BadRequest(body)
+            ErrorType.NotFound => StatusCodes.Status404NotFound,
+            ErrorType.Validation => StatusCodes.Status400BadRequest,
+            ErrorType.Conflict => StatusCodes.Status409Conflict,
+            ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
+            ErrorType.TooManyRequests => StatusCodes.Status429TooManyRequests,
+            _ => StatusCodes.Status500InternalServerError
         };
     }
 }

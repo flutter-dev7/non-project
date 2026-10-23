@@ -17,12 +17,17 @@ public class AuthController : ApiControllerBase
     }
 
     [AllowAnonymous]
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
+    {
+        return ToActionResult(await _authService.RegisterAsync(request, ct));
+    }
+
+    [AllowAnonymous]
     [HttpPost("send-code")]
     public async Task<IActionResult> SendCode([FromBody] SendCodeRequest request, CancellationToken ct)
     {
-        var result = await _authService.SendCodeAsync(request, ct);
-
-        return result.IsSuccess ? NoContent() : ToErrorResult(result);
+        return ToActionResult(await _authService.SendCodeAsync(request, ct));
     }
 
     [AllowAnonymous]
@@ -42,14 +47,5 @@ public class AuthController : ApiControllerBase
             return Unauthorized();
 
         return ToActionResult(await _authService.GetCurrentUserAsync(userId, ct));
-    }
-    
-    [AllowAnonymous]
-    [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
-    {
-        var result = await _authService.RegisterAsync(request, ct);
-
-        return result.IsSuccess ? NoContent() : ToErrorResult(result);
     }
 }
