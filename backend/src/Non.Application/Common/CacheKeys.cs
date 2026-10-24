@@ -10,4 +10,6 @@ public static class CacheKeys
     public static string OtpCode(string phone) => $"auth:otp:{phone}";
 
     public static string OtpCooldown(string phone) => $"auth:otp-cooldown:{phone}";
+    
+    public static string UserAccess(Guid userId) => $"auth:user-access:{userId}";
 }

@@ -37,7 +37,12 @@ public class ApiResponse<T>
 
     public T Require()
     {
-        Assert.True(IsSuccess, $"HTTP {(int)StatusCode}: {Error ?? RawBody}");
+        if (!IsSuccess)
+        {
+            throw new Xunit.Sdk.XunitException(
+                $"HTTP {(int)StatusCode}: {Error ?? RawBody}{Environment.NewLine}" +
+                $"Ошибки из логов API:{Environment.NewLine}{TestDiagnostics.Dump()}");
+        }
 
         return Data!;
     }

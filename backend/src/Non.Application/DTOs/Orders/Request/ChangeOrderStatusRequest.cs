@@ -8,7 +8,7 @@ public class ChangeOrderStatusRequest
     [EnumDataType(typeof(OrderStatus))]
     public OrderStatus Status { get; set; }
 
-    [Range(typeof(decimal), "0.01", "100000000")]
+    [Range(typeof(decimal), "0.01", "100000000", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     public decimal? PaymentAmount { get; set; }
 
     [EnumDataType(typeof(PaymentMethod))]

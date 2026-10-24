@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Non.Application.Common;
 using Non.Application.DTOs.Orders.Request;
 using Non.Application.DTOs.Orders.Response;
@@ -217,6 +218,7 @@ public class ApiFixture : IAsyncLifetime
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Testing");
+            builder.ConfigureLogging(logging => logging.AddProvider(new CapturingLoggerProvider()));
 
             builder.ConfigureTestServices(services =>
             {

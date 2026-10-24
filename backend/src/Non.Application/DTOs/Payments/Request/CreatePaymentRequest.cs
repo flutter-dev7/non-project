@@ -9,7 +9,7 @@ public class CreatePaymentRequest
 
     public Guid? OrderId { get; set; }
 
-    [Range(typeof(decimal), "0.01", "100000000")]
+    [Range(typeof(decimal), "0.01", "100000000", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     public decimal Amount { get; set; }
 
     [EnumDataType(typeof(PaymentMethod))]
