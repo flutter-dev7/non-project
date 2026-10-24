@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Non.Application.DTOs.Auth.Request;
 using Non.Application.Interfaces.Services;
 
@@ -18,6 +19,7 @@ public class AuthController : ApiControllerBase
 
     [AllowAnonymous]
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
     {
         return ToActionResult(await _authService.RegisterAsync(request, ct));
@@ -25,6 +27,7 @@ public class AuthController : ApiControllerBase
 
     [AllowAnonymous]
     [HttpPost("send-code")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> SendCode([FromBody] SendCodeRequest request, CancellationToken ct)
     {
         return ToActionResult(await _authService.SendCodeAsync(request, ct));
@@ -32,6 +35,7 @@ public class AuthController : ApiControllerBase
 
     [AllowAnonymous]
     [HttpPost("verify")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Verify([FromBody] VerifyCodeRequest request, CancellationToken ct)
     {
         return ToActionResult(await _authService.VerifyCodeAsync(request, ct));

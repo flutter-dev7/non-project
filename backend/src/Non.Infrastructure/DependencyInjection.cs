@@ -57,6 +57,8 @@ public static class DependencyInjection
         
         services.AddScoped<ISettingService, SettingService>();
         
+        services.AddScoped<IUserAccessService, UserAccessService>();
+        
         return services;
     }
 }
