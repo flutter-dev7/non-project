@@ -20,6 +20,8 @@ public class OrderService : IOrderService
     private readonly IProductRepository _productRepository;
     private readonly IUserRepository _userRepository;
     private readonly ISettingRepository _settingRepository;
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly IDebtService _debtService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cacheService;
     private readonly TimeProvider _timeProvider;
@@ -30,6 +32,8 @@ public class OrderService : IOrderService
         IProductRepository productRepository,
         IUserRepository userRepository,
         ISettingRepository settingRepository,
+        IPaymentRepository paymentRepository,
+        IDebtService debtService,
         IUnitOfWork unitOfWork,
         ICacheService cacheService,
         TimeProvider timeProvider)
@@ -39,6 +43,8 @@ public class OrderService : IOrderService
         _productRepository = productRepository;
         _userRepository = userRepository;
         _settingRepository = settingRepository;
+        _paymentRepository = paymentRepository;
+        _debtService = debtService;
         _unitOfWork = unitOfWork;
         _cacheService = cacheService;
         _timeProvider = timeProvider;
@@ -108,6 +114,9 @@ public class OrderService : IOrderService
 
         var shop = shopResult.Value!;
 
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(ct);
+        await _shopRepository.LockForUpdateAsync(shop.Id, ct);
+
         if (request.Id.HasValue)
         {
             var existing = await _orderRepository.GetDetailsByIdAsync(request.Id.Value, ct);
@@ -147,10 +156,26 @@ public class OrderService : IOrderService
         foreach (var (productId, quantity) in requested)
             order.AddItem(productId, quantity, activeProducts[productId].Price);
 
+        if (request.PaymentType == PaymentType.Debt &&
+            caller.Role != UserRole.Admin &&
+            shop.DebtLimit.HasValue)
+        {
+            var balance = await _debtService.GetBalanceAsync(shop.Id, ct);
+            var exposure = balance.Debt + balance.PendingDebtOrdersTotal + order.TotalAmount;
+
+            if (exposure > shop.DebtLimit.Value)
+            {
+                return Result<OrderDetailsResponse>.Failure(
+                    $"Превышен лимит долга магазина: лимит {shop.DebtLimit.Value.ToMoney()}, " +
+                    $"долг с учётом заказов в работе и этого заказа {exposure.ToMoney()}.");
+            }
+        }
+
         order.RecordStatus(caller.Id);
 
         await _orderRepository.AddAsync(order, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         return await ReloadAsync(order.Id, ct);
     }
@@ -181,6 +206,12 @@ public class OrderService : IOrderService
 
         if (request.Status == OrderStatus.OnTheWay && order.CourierId is null)
             return Result<OrderDetailsResponse>.Failure("Сначала назначьте курьера.");
+
+        if (request.Status != OrderStatus.Delivered && request.PaymentAmount.HasValue)
+            return Result<OrderDetailsResponse>.Failure("Сумма оплаты указывается только при доставке.");
+
+        if (request.Status == OrderStatus.Delivered)
+            return await DeliverAsync(order, request, caller, ct);
 
         try
         {
@@ -247,6 +278,61 @@ public class OrderService : IOrderService
 
         order.CourierId = courier.Id;
         await _unitOfWork.SaveChangesAsync(ct);
+
+        return await ReloadAsync(order.Id, ct);
+    }
+
+    private async Task<Result<OrderDetailsResponse>> DeliverAsync(
+        Order order, ChangeOrderStatusRequest request, CurrentUser caller, CancellationToken ct)
+    {
+        if (order.PaymentType == PaymentType.Now && request.PaymentAmount is null)
+            return Result<OrderDetailsResponse>.Failure("Для заказа с оплатой «Сразу» укажите принятую сумму.");
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(ct);
+        await _shopRepository.LockForUpdateAsync(order.ShopId, ct);
+        await _orderRepository.ReloadAsync(order, ct);
+
+        try
+        {
+            order.ChangeStatus(OrderStatus.Delivered, caller.Id);
+        }
+        catch (DomainException ex)
+        {
+            return Result<OrderDetailsResponse>.Failure(ex.Message);
+        }
+
+        if (request.PaymentAmount.HasValue)
+        {
+            var balance = await _debtService.GetBalanceAsync(order.ShopId, ct);
+            var debtAfterDelivery = balance.Debt + order.TotalAmount;
+
+            if (request.PaymentAmount.Value > debtAfterDelivery)
+            {
+                return Result<OrderDetailsResponse>.Failure(
+                    $"Сумма оплаты ({request.PaymentAmount.Value.ToMoney()}) превышает долг магазина " +
+                    $"({debtAfterDelivery.ToMoney()}).");
+            }
+
+            Payment payment;
+            try
+            {
+                payment = Payment.Create(
+                    order.ShopId,
+                    order.Id,
+                    request.PaymentAmount.Value,
+                    request.PaymentMethod ?? PaymentMethod.Cash,
+                    caller.Id);
+            }
+            catch (DomainException ex)
+            {
+                return Result<OrderDetailsResponse>.Failure(ex.Message);
+            }
+
+            await _paymentRepository.AddAsync(payment, ct);
+        }
+
+        await _unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         return await ReloadAsync(order.Id, ct);
     }

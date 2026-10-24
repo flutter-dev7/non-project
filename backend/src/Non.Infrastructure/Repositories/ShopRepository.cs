@@ -60,6 +60,16 @@ public class ShopRepository : IShopRepository
 
         return (items, totalCount);
     }
+    
+    public Task<List<Shop>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default) =>
+        _context.Shops
+            .AsNoTracking()
+            .Where(s => ids.Contains(s.Id))
+            .ToListAsync(ct);
+
+    public Task LockForUpdateAsync(Guid shopId, CancellationToken ct = default) =>
+        _context.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT \"Id\" FROM \"Shops\" WHERE \"Id\" = {shopId} FOR UPDATE", ct);
 
     public async Task AddAsync(Shop shop, CancellationToken ct = default)
     {

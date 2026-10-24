@@ -10,6 +10,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
     {
         builder.ToTable("Payments");
         builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
 
         builder.Ignore(p => p.IsReversal);
 
@@ -37,5 +38,7 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(p => p.ShopId);
+        builder.HasIndex(p => p.OrderId);
+        builder.HasIndex(p => p.ReversalOfPaymentId).IsUnique();
     }
 }

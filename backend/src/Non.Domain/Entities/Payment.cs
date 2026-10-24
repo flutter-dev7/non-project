@@ -23,6 +23,25 @@ public class Payment : BaseEntity
 
     public bool IsReversal => ReversalOfPaymentId.HasValue;
 
+    public static Payment Create(
+        Guid shopId, Guid? orderId, decimal amount, PaymentMethod method, Guid receivedByUserId)
+    {
+        if (amount <= 0)
+            throw new DomainException("Сумма платежа должна быть больше нуля.");
+
+        if (decimal.Round(amount, 2) != amount)
+            throw new DomainException("Сумма платежа может содержать не более двух знаков после запятой.");
+
+        return new Payment
+        {
+            ShopId = shopId,
+            OrderId = orderId,
+            Amount = amount,
+            Method = method,
+            ReceivedByUserId = receivedByUserId
+        };
+    }
+
     public Payment CreateReversal(Guid userId, string reason)
     {
         if (IsReversal)
@@ -38,7 +57,7 @@ public class Payment : BaseEntity
             Method = Method,
             ReceivedByUserId = userId,
             ReversalOfPaymentId = Id,
-            ReversalReason = reason
+            ReversalReason = reason.Trim()
         };
     }
 }

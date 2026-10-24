@@ -11,10 +11,12 @@ namespace Non.API.Controllers;
 public class ShopsController : ApiControllerBase
 {
     private readonly IShopService _shopService;
+    private readonly IDebtService _debtService;
 
-    public ShopsController(IShopService shopService)
+    public ShopsController(IShopService shopService, IDebtService debtService)
     {
         _shopService = shopService;
+        _debtService = debtService;
     }
 
     [HttpGet]
@@ -82,5 +84,19 @@ public class ShopsController : ApiControllerBase
             return ToErrorResult(result);
 
         return CreatedAtAction(nameof(GetMy), result);
+    }
+    
+    [HttpGet("my/balance")]
+    [Authorize(Roles = RoleNames.Shop)]
+    public async Task<IActionResult> GetMyBalance(CancellationToken ct)
+    {
+        return ToActionResult(await _debtService.GetMyBalanceAsync(Caller, ct));
+    }
+
+    [HttpGet("{id:guid}/balance")]
+    [Authorize(Roles = RoleNames.AdminOrAgent)]
+    public async Task<IActionResult> GetBalance(Guid id, CancellationToken ct)
+    {
+        return ToActionResult(await _debtService.GetShopBalanceAsync(id, ct));
     }
 }

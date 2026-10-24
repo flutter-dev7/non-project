@@ -43,6 +43,11 @@ public static class DependencyInjection
         services.AddScoped<ISettingRepository, SettingRepository>();
 
         services.AddScoped<IOrderService, OrderService>();
+        
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+        services.AddScoped<IDebtService, DebtService>();
+        services.AddScoped<IPaymentService, PaymentService>();
 
         return services;
     }

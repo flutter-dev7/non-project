@@ -131,7 +131,6 @@ namespace Non.Infrastructure.Migrations
             modelBuilder.Entity("Non.Domain.Entities.Payment", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
@@ -166,7 +165,8 @@ namespace Non.Infrastructure.Migrations
 
                     b.HasIndex("ReceivedByUserId");
 
-                    b.HasIndex("ReversalOfPaymentId");
+                    b.HasIndex("ReversalOfPaymentId")
+                        .IsUnique();
 
                     b.HasIndex("ShopId");
 
