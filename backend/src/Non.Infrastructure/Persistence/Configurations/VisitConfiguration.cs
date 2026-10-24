@@ -10,6 +10,7 @@ public class VisitConfiguration : IEntityTypeConfiguration<Visit>
     {
         builder.ToTable("Visits");
         builder.HasKey(v => v.Id);
+        builder.Property(v => v.Id).ValueGeneratedNever();
 
         builder.Property(v => v.Note).HasMaxLength(1000);
 
@@ -22,5 +23,8 @@ public class VisitConfiguration : IEntityTypeConfiguration<Visit>
             .WithMany()
             .HasForeignKey(v => v.AgentId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(v => new { v.ShopId, v.VisitedAt });
+        builder.HasIndex(v => new { v.AgentId, v.VisitedAt });
     }
 }

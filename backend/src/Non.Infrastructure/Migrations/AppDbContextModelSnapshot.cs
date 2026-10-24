@@ -313,7 +313,6 @@ namespace Non.Infrastructure.Migrations
             modelBuilder.Entity("Non.Domain.Entities.Visit", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("AgentId")
@@ -334,9 +333,9 @@ namespace Non.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AgentId");
+                    b.HasIndex("AgentId", "VisitedAt");
 
-                    b.HasIndex("ShopId");
+                    b.HasIndex("ShopId", "VisitedAt");
 
                     b.ToTable("Visits", (string)null);
                 });
