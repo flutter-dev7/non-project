@@ -12,5 +12,11 @@ public interface IAuthService
 
     Task<Result<AuthResponse>> VerifyCodeAsync(VerifyCodeRequest request, CancellationToken ct = default);
 
+    Task<Result<AuthResponse>> RefreshAsync(RefreshTokenRequest request, CancellationToken ct = default);
+
+    Task<Result> LogoutAsync(RefreshTokenRequest request, CancellationToken ct = default);
+
+    Task<Result> LogoutAllAsync(Guid userId, CancellationToken ct = default);
+
     Task<Result<UserResponse>> GetCurrentUserAsync(Guid userId, CancellationToken ct = default);
 }

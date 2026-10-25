@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Non.Application.Common;
+using Non.Application.DTOs.Auth.Request;
+using Non.Application.DTOs.Auth.Response;
 using Non.Application.DTOs.Orders.Request;
 using Non.Application.DTOs.Orders.Response;
 using Non.Application.DTOs.Payments.Request;
@@ -37,6 +39,7 @@ public class ApiFixture : IAsyncLifetime
     public CapturingSmsSender Sms { get; } = new();
 
     public IServiceProvider Services => _factory!.Services;
+    
 
     private static string ResolveConnectionString()
     {
@@ -84,6 +87,7 @@ public class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("Jwt__Issuer", "Non.API");
         Environment.SetEnvironmentVariable("Jwt__Audience", "Non.Clients");
         Environment.SetEnvironmentVariable("Jwt__ExpirationMinutes", "60");
+        Environment.SetEnvironmentVariable("RateLimiting__AuthPermitPerMinute", "100000");
 
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ConnectionString).Options;
 
@@ -95,6 +99,23 @@ public class ApiFixture : IAsyncLifetime
 
         _factory = new NonApiFactory(Sms);
         _ = _factory.Services;
+    }
+    
+    public Task ClearOtpCooldownAsync(string phone) =>
+        Services.GetRequiredService<ICacheService>().RemoveAsync(CacheKeys.OtpCooldown(phone));
+
+    public async Task<AuthResponse> LoginAsync(string phone)
+    {
+        await ClearOtpCooldownAsync(phone);
+
+        var anonymous = CreateAnonymousClient();
+
+        (await anonymous.PostAsync<object>("/api/auth/send-code", new SendCodeRequest { Phone = phone })).Require();
+
+        var code = Sms.GetCode(phone) ?? throw new InvalidOperationException("Код не был отправлен.");
+
+        return (await anonymous.PostAsync<AuthResponse>("/api/auth/verify",
+            new VerifyCodeRequest { Phone = phone, Code = code })).Require();
     }
 
     public async Task DisposeAsync()

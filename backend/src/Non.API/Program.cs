@@ -104,6 +104,8 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+var authPermitPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPermitPerMinute", 30);
+
 builder.Services.AddRateLimiter(options =>
 {
     options.OnRejected = async (context, _) =>
@@ -120,7 +122,7 @@ builder.Services.AddRateLimiter(options =>
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 30,
+                PermitLimit = authPermitPerMinute,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));

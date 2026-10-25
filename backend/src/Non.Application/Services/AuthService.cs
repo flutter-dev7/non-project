@@ -14,26 +14,33 @@ public class AuthService : IAuthService
 {
     private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private const int MaxAttempts = 5;
 
     private readonly IUserRepository _userRepository;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cacheService;
     private readonly ISmsSender _smsSender;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly TimeProvider _timeProvider;
 
     public AuthService(
         IUserRepository userRepository,
+        IRefreshTokenRepository refreshTokenRepository,
         IUnitOfWork unitOfWork,
         ICacheService cacheService,
         ISmsSender smsSender,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IJwtTokenGenerator jwtTokenGenerator,
+        TimeProvider timeProvider)
     {
         _userRepository = userRepository;
+        _refreshTokenRepository = refreshTokenRepository;
         _unitOfWork = unitOfWork;
         _cacheService = cacheService;
         _smsSender = smsSender;
         _jwtTokenGenerator = jwtTokenGenerator;
+        _timeProvider = timeProvider;
     }
 
     public async Task<Result> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
@@ -122,14 +129,72 @@ public class AuthService : IAuthService
         if (user is null || !user.IsActive)
             return Result<AuthResponse>.Failure("Пользователь с таким номером не найден.", ErrorType.NotFound);
 
-        var token = _jwtTokenGenerator.Generate(user);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var refreshToken = CreateRefreshToken(user.Id, now, out var rawRefreshToken);
 
-        return Result<AuthResponse>.Success(new AuthResponse
+        await _refreshTokenRepository.AddAsync(refreshToken, ct);
+        await _refreshTokenRepository.RemoveExpiredAsync(user.Id, now, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return Result<AuthResponse>.Success(BuildResponse(user, rawRefreshToken, refreshToken.ExpiresAt));
+    }
+
+    public async Task<Result<AuthResponse>> RefreshAsync(RefreshTokenRequest request, CancellationToken ct = default)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        var stored = await _refreshTokenRepository.GetByHashAsync(RefreshTokenHasher.Hash(request.RefreshToken), ct);
+        if (stored is null)
+            return Unauthorized("Недействительный токен обновления.");
+
+        if (stored.RevokedAt is not null)
         {
-            AccessToken = token.Value,
-            ExpiresAt = token.ExpiresAt,
-            User = ToResponse(user)
-        });
+            if (stored.ReplacedByTokenId is not null)
+                await RevokeAllAsync(stored.UserId, now, ct);
+
+            return Unauthorized("Сессия недействительна. Войдите заново.");
+        }
+
+        if (stored.ExpiresAt <= now)
+            return Unauthorized("Сессия истекла. Войдите заново.");
+
+        var user = stored.User;
+        if (user is null || !user.IsActive)
+            return Unauthorized("Сессия недействительна. Войдите заново.");
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(ct);
+
+        var newToken = CreateRefreshToken(user.Id, now, out var rawRefreshToken);
+
+        if (!await _refreshTokenRepository.TryRevokeAsync(stored.Id, newToken.Id, now, ct))
+            return Unauthorized("Токен уже использован. Повторите запрос или войдите заново.");
+
+        await _refreshTokenRepository.AddAsync(newToken, ct);
+        await _refreshTokenRepository.RemoveExpiredAsync(user.Id, now, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        return Result<AuthResponse>.Success(BuildResponse(user, rawRefreshToken, newToken.ExpiresAt));
+    }
+
+    public async Task<Result> LogoutAsync(RefreshTokenRequest request, CancellationToken ct = default)
+    {
+        var stored = await _refreshTokenRepository.GetByHashAsync(RefreshTokenHasher.Hash(request.RefreshToken), ct);
+
+        if (stored is not null && stored.RevokedAt is null)
+        {
+            stored.RevokedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            await _unitOfWork.SaveChangesAsync(ct);
+        }
+
+        return Result.Success();
+    }
+
+    public async Task<Result> LogoutAllAsync(Guid userId, CancellationToken ct = default)
+    {
+        await RevokeAllAsync(userId, _timeProvider.GetUtcNow().UtcDateTime, ct);
+
+        return Result.Success();
     }
 
     public async Task<Result<UserResponse>> GetCurrentUserAsync(Guid userId, CancellationToken ct = default)
@@ -140,6 +205,45 @@ public class AuthService : IAuthService
 
         return Result<UserResponse>.Success(ToResponse(user));
     }
+
+    private async Task RevokeAllAsync(Guid userId, DateTime now, CancellationToken ct)
+    {
+        var active = await _refreshTokenRepository.GetActiveByUserAsync(userId, now, ct);
+
+        foreach (var token in active)
+            token.RevokedAt = now;
+
+        await _unitOfWork.SaveChangesAsync(ct);
+    }
+
+    private static RefreshToken CreateRefreshToken(Guid userId, DateTime now, out string rawToken)
+    {
+        rawToken = RefreshTokenHasher.Generate();
+
+        return new RefreshToken
+        {
+            UserId = userId,
+            TokenHash = RefreshTokenHasher.Hash(rawToken),
+            ExpiresAt = now.Add(RefreshTokenLifetime)
+        };
+    }
+
+    private AuthResponse BuildResponse(User user, string rawRefreshToken, DateTime refreshExpiresAt)
+    {
+        var accessToken = _jwtTokenGenerator.Generate(user);
+
+        return new AuthResponse
+        {
+            AccessToken = accessToken.Value,
+            ExpiresAt = accessToken.ExpiresAt,
+            RefreshToken = rawRefreshToken,
+            RefreshTokenExpiresAt = refreshExpiresAt,
+            User = ToResponse(user)
+        };
+    }
+
+    private static Result<AuthResponse> Unauthorized(string message) =>
+        Result<AuthResponse>.Failure(message, ErrorType.Unauthorized);
 
     private async Task<Result> IssueCodeAsync(string phone, string? firstName, string? lastName, CancellationToken ct)
     {

@@ -52,4 +52,25 @@ public class AuthController : ApiControllerBase
 
         return ToActionResult(await _authService.GetCurrentUserAsync(userId, ct));
     }
+    
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken ct)
+    {
+        return ToActionResult(await _authService.RefreshAsync(request, ct));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request, CancellationToken ct)
+    {
+        return ToActionResult(await _authService.LogoutAsync(request, ct));
+    }
+
+    [Authorize]
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll(CancellationToken ct)
+    {
+        return ToActionResult(await _authService.LogoutAllAsync(CurrentUserId, ct));
+    }
 }
