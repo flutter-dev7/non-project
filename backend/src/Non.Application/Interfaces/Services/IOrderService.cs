@@ -21,4 +21,7 @@ public interface IOrderService
 
     Task<Result<OrderDetailsResponse>> AssignCourierAsync(
         Guid id, AssignCourierRequest request, CancellationToken ct = default);
+    
+    Task<Result<OrderDetailsResponse>> UpdateAsync(
+        Guid id, UpdateOrderRequest request, CurrentUser caller, CancellationToken ct = default);
 }

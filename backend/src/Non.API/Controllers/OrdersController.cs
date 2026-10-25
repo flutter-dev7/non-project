@@ -63,4 +63,11 @@ public class OrdersController : ApiControllerBase
     {
         return ToActionResult(await _orderService.AssignCourierAsync(id, request, ct));
     } 
+    
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = RoleNames.OrderCreators)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateOrderRequest request, CancellationToken ct)
+    {
+        return ToActionResult(await _orderService.UpdateAsync(id, request, Caller, ct));
+    }
 }

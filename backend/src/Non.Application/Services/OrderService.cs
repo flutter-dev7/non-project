@@ -234,16 +234,12 @@ public class OrderService : IOrderService
         if (order is null)
             return Result<OrderDetailsResponse>.Failure("Заказ не найден.", ErrorType.NotFound);
 
-        var allowed = caller.Role switch
-        {
-            UserRole.Admin => true,
-            UserRole.Agent => order.CreatedByUserId == caller.Id,
-            UserRole.Shop => await IsShopOwnerAsync(order.ShopId, caller.Id, ct),
-            _ => false
-        };
-
-        if (!allowed)
+        if (!await CanManageAsync(order, caller, ct))
             return Result<OrderDetailsResponse>.Failure("Недостаточно прав для отмены этого заказа.", ErrorType.Forbidden);
+
+        var windowError = await ValidateChangeWindowAsync(order, caller.Role, ct);
+        if (windowError is not null)
+            return Result<OrderDetailsResponse>.Failure(windowError);
 
         try
         {
@@ -255,6 +251,92 @@ public class OrderService : IOrderService
         }
 
         await _unitOfWork.SaveChangesAsync(ct);
+
+        return await ReloadAsync(order.Id, ct);
+    }
+    
+        public async Task<Result<OrderDetailsResponse>> UpdateAsync(
+        Guid id, UpdateOrderRequest request, CurrentUser caller, CancellationToken ct = default)
+    {
+        var order = await _orderRepository.GetWithItemsForUpdateAsync(id, ct);
+        if (order is null)
+            return Result<OrderDetailsResponse>.Failure("Заказ не найден.", ErrorType.NotFound);
+
+        if (!await CanManageAsync(order, caller, ct))
+            return Result<OrderDetailsResponse>.Failure("Недостаточно прав для изменения этого заказа.", ErrorType.Forbidden);
+
+        if (!order.CanBeEdited)
+            return Result<OrderDetailsResponse>.Failure("Заказ нельзя изменить после начала выпечки.");
+
+        var windowError = await ValidateChangeWindowAsync(order, caller.Role, ct);
+        if (windowError is not null)
+            return Result<OrderDetailsResponse>.Failure(windowError);
+
+        var dateError = await ValidateDeliveryDateAsync(request.DeliveryDate, caller.Role, ct);
+        if (dateError is not null)
+            return Result<OrderDetailsResponse>.Failure(dateError);
+
+        var requested = request.Items
+            .GroupBy(i => i.ProductId)
+            .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+
+        var products = await _productRepository.GetByIdsAsync(requested.Keys.ToList(), ct);
+        var activeProducts = products.Where(p => p.IsActive).ToDictionary(p => p.Id);
+
+        if (requested.Keys.Any(productId => !activeProducts.ContainsKey(productId)))
+            return Result<OrderDetailsResponse>.Failure("Некоторые продукты не найдены или отключены.");
+
+        var existingPrices = order.Items.ToDictionary(i => i.ProductId, i => i.UnitPrice);
+
+        var lines = requested
+            .Select(r => (
+                ProductId: r.Key,
+                Quantity: r.Value,
+                UnitPrice: existingPrices.TryGetValue(r.Key, out var price) ? price : activeProducts[r.Key].Price))
+            .ToList();
+
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(ct);
+        await _shopRepository.LockForUpdateAsync(order.ShopId, ct);
+        await _orderRepository.ReloadAsync(order, ct);
+
+        if (!order.CanBeEdited)
+            return Result<OrderDetailsResponse>.Failure("Заказ нельзя изменить после начала выпечки.");
+
+        if (request.PaymentType == PaymentType.Debt && caller.Role != UserRole.Admin)
+        {
+            var shop = await _shopRepository.GetDetailsByIdAsync(order.ShopId, ct);
+
+            if (shop?.DebtLimit is { } limit)
+            {
+                var newTotal = lines.Sum(l => l.Quantity * l.UnitPrice);
+                var balance = await _debtService.GetBalanceAsync(order.ShopId, ct);
+                var ownPending = order.PaymentType == PaymentType.Debt ? order.TotalAmount : 0m;
+                var exposure = balance.Debt + balance.PendingDebtOrdersTotal - ownPending + newTotal;
+
+                if (exposure > limit)
+                {
+                    return Result<OrderDetailsResponse>.Failure(
+                        $"Превышен лимит долга магазина: лимит {limit.ToMoney()}, " +
+                        $"долг с учётом заказов в работе и этого заказа {exposure.ToMoney()}.");
+                }
+            }
+        }
+
+        order.DeliveryDate = request.DeliveryDate;
+        order.PaymentType = request.PaymentType;
+        order.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+
+        try
+        {
+            order.ReplaceItems(lines);
+        }
+        catch (DomainException ex)
+        {
+            return Result<OrderDetailsResponse>.Failure(ex.Message);
+        }
+
+        await _unitOfWork.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         return await ReloadAsync(order.Id, ct);
     }
@@ -408,6 +490,37 @@ public class OrderService : IOrderService
         var shop = await _shopRepository.GetDetailsByOwnerIdAsync(userId, ct);
 
         return shop?.Id == shopId;
+    }
+    
+    private async Task<bool> CanManageAsync(Order order, CurrentUser caller, CancellationToken ct) =>
+        caller.Role switch
+        {
+            UserRole.Admin => true,
+            UserRole.Agent => order.CreatedByUserId == caller.Id,
+            UserRole.Shop => await IsShopOwnerAsync(order.ShopId, caller.Id, ct),
+            _ => false
+        };
+
+    private async Task<string?> ValidateChangeWindowAsync(Order order, UserRole role, CancellationToken ct)
+    {
+        if (role == UserRole.Admin)
+            return null;
+
+        var nowLocal = _timeProvider.GetUtcNow().ToOffset(BusinessRules.UtcOffset).DateTime;
+        var today = DateOnly.FromDateTime(nowLocal);
+
+        if (order.DeliveryDate <= today)
+            return "Заказ на сегодня или прошедшую дату изменить нельзя.";
+
+        if (order.DeliveryDate == today.AddDays(1))
+        {
+            var cutoff = await GetCutoffTimeAsync(ct);
+
+            if (TimeOnly.FromDateTime(nowLocal) > cutoff)
+                return $"Изменение и отмена заказов на завтра закрыты после {cutoff.ToString("HH:mm", CultureInfo.InvariantCulture)}.";
+        }
+
+        return null;
     }
 
     private async Task<Result<OrderDetailsResponse>> ReloadAsync(Guid id, CancellationToken ct)

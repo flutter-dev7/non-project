@@ -128,4 +128,64 @@ public class OrderTests
         Assert.Throws<DomainException>(() => order.Cancel(UserId));
         Assert.Equal(OrderStatus.Baking, order.Status);
     }
+    
+    [Theory]
+    [InlineData(OrderStatus.New, true)]
+    [InlineData(OrderStatus.Accepted, true)]
+    [InlineData(OrderStatus.Baking, false)]
+    [InlineData(OrderStatus.OnTheWay, false)]
+    [InlineData(OrderStatus.Delivered, false)]
+    [InlineData(OrderStatus.Cancelled, false)]
+    public void CanBeEdited_DependsOnStatus(OrderStatus status, bool expected)
+    {
+        var order = CreateOrder();
+        order.Status = status;
+
+        Assert.Equal(expected, order.CanBeEdited);
+    }
+
+    [Fact]
+    public void ReplaceItems_UpdatesExisting_AddsNew_RemovesMissing_AndRecalculates()
+    {
+        var order = CreateOrder();
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        var c = Guid.NewGuid();
+
+        order.AddItem(a, 10, 5m);
+        order.AddItem(b, 10, 8m);
+
+        order.ReplaceItems(new[] { (a, 20, 5m), (c, 5, 10m) });
+
+        Assert.Equal(2, order.Items.Count);
+        Assert.DoesNotContain(order.Items, i => i.ProductId == b);
+        Assert.Equal(20, order.Items.Single(i => i.ProductId == a).Quantity);
+        Assert.Equal(150m, order.TotalAmount);
+    }
+
+    [Fact]
+    public void ReplaceItems_AfterBakingStarted_Throws()
+    {
+        var order = CreateOrder();
+        order.AddItem(Guid.NewGuid(), 10, 5m);
+        order.Status = OrderStatus.Baking;
+
+        Assert.Throws<DomainException>(() => order.ReplaceItems(new[] { (Guid.NewGuid(), 1, 5m) }));
+    }
+
+    [Fact]
+    public void ReplaceItems_WithInvalidQuantity_Throws()
+    {
+        var order = CreateOrder();
+
+        Assert.Throws<DomainException>(() => order.ReplaceItems(new[] { (Guid.NewGuid(), 0, 5m) }));
+    }
+
+    [Fact]
+    public void ReplaceItems_WithNoLines_Throws()
+    {
+        var order = CreateOrder();
+
+        Assert.Throws<DomainException>(() => order.ReplaceItems(Array.Empty<(Guid, int, decimal)>()));
+    }
 }

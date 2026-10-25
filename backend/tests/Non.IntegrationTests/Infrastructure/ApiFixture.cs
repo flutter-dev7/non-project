@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -29,15 +30,46 @@ public record ShopContext(Guid ShopId, ApiClient Owner);
 
 public class ApiFixture : IAsyncLifetime
 {
-    public static readonly string ConnectionString =
-        Environment.GetEnvironmentVariable("NON_TEST_CONNECTION")
-        ?? "Host=localhost;Port=5432;Database=non_tests;Username=postgres;Password=postgres";
+    public static readonly string ConnectionString = ResolveConnectionString();
 
     private NonApiFactory? _factory;
 
     public CapturingSmsSender Sms { get; } = new();
 
     public IServiceProvider Services => _factory!.Services;
+
+    private static string ResolveConnectionString()
+    {
+        var fromEnvironment = Environment.GetEnvironmentVariable("NON_TEST_CONNECTION");
+
+        if (!string.IsNullOrWhiteSpace(fromEnvironment))
+            return fromEnvironment;
+
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null)
+        {
+            var path = Path.Combine(directory.FullName, "src", "Non.API", "appsettings.Development.json");
+
+            if (File.Exists(path))
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+
+                var devConnection = document.RootElement
+                    .GetProperty("ConnectionStrings")
+                    .GetProperty("DefaultConnection")
+                    .GetString()
+                    ?? throw new InvalidOperationException("В appsettings.Development.json нет ConnectionStrings:DefaultConnection.");
+
+                return new NpgsqlConnectionStringBuilder(devConnection) { Database = "non_tests" }.ConnectionString;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException(
+            "Не найден src/Non.API/appsettings.Development.json. Задай переменную окружения NON_TEST_CONNECTION.");
+    }
 
     public async Task InitializeAsync()
     {

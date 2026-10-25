@@ -36,6 +36,55 @@ public class Order : BaseEntity
     public ICollection<OrderStatusHistory> StatusHistory { get; set; } = new List<OrderStatusHistory>();
 
     public bool CanBeCancelled => Status is OrderStatus.New or OrderStatus.Accepted;
+    
+    public bool CanBeEdited => Status is OrderStatus.New or OrderStatus.Accepted;
+
+    public void ReplaceItems(IEnumerable<(Guid ProductId, int Quantity, decimal UnitPrice)> lines)
+    {
+        if (!CanBeEdited)
+            throw new DomainException("Заказ нельзя изменить после начала выпечки.");
+
+        var wanted = new Dictionary<Guid, (int Quantity, decimal UnitPrice)>();
+
+        foreach (var (productId, quantity, unitPrice) in lines)
+        {
+            if (quantity <= 0)
+                throw new DomainException("Количество должно быть больше нуля.");
+            if (unitPrice < 0)
+                throw new DomainException("Цена не может быть отрицательной.");
+
+            wanted[productId] = (quantity, unitPrice);
+        }
+
+        if (wanted.Count == 0)
+            throw new DomainException("В заказе должна быть хотя бы одна позиция.");
+
+        foreach (var removed in Items.Where(i => !wanted.ContainsKey(i.ProductId)).ToList())
+            Items.Remove(removed);
+
+        foreach (var (productId, line) in wanted)
+        {
+            var existing = Items.FirstOrDefault(i => i.ProductId == productId);
+
+            if (existing is null)
+            {
+                Items.Add(new OrderItem
+                {
+                    OrderId = Id,
+                    ProductId = productId,
+                    Quantity = line.Quantity,
+                    UnitPrice = line.UnitPrice
+                });
+            }
+            else
+            {
+                existing.Quantity = line.Quantity;
+                existing.UnitPrice = line.UnitPrice;
+            }
+        }
+
+        RecalculateTotal();
+    }
 
     public bool CountsAsDebt => Status == OrderStatus.Delivered && PaymentType == PaymentType.Debt;
 

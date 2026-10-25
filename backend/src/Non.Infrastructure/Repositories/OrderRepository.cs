@@ -69,6 +69,11 @@ public class OrderRepository : IOrderRepository
 
         return (items, totalCount);
     }
+    
+    public Task<Order?> GetWithItemsForUpdateAsync(Guid id, CancellationToken ct = default) =>
+        _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id, ct);
 
     public async Task AddAsync(Order order, CancellationToken ct = default)
     {

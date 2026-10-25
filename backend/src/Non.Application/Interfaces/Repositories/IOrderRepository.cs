@@ -27,4 +27,6 @@ public interface IOrderRepository
     Task<bool> CourierServesShopAsync(Guid courierId, Guid shopId, CancellationToken ct = default);
 
     Task<bool> ExistsForShopAsync(Guid orderId, Guid shopId, CancellationToken ct = default);
+    
+    Task<Order?> GetWithItemsForUpdateAsync(Guid id, CancellationToken ct = default);
 }
