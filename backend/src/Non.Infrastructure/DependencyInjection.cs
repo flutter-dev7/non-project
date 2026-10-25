@@ -5,6 +5,7 @@ using Non.Application.Common;
 using Non.Application.Interfaces.Repositories;
 using Non.Application.Interfaces.Services;
 using Non.Application.Services;
+using Non.Infrastructure.Notifications;
 using Non.Infrastructure.Persistence.Data;
 using Non.Infrastructure.Repositories;
 using Non.Infrastructure.Services;
@@ -60,6 +61,22 @@ public static class DependencyInjection
         services.AddScoped<IUserAccessService, UserAccessService>();
         
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        
+        services.AddSingleton<PushQueue>();
+        services.AddSingleton<IPushQueue>(sp => sp.GetRequiredService<PushQueue>());
+        services.AddHostedService<PushDispatcher>();
+
+        var firebaseConfigured =
+            !string.IsNullOrWhiteSpace(configuration["Firebase:CredentialsJson"]) ||
+            !string.IsNullOrWhiteSpace(configuration["Firebase:CredentialsPath"]);
+
+        if (firebaseConfigured)
+            services.AddSingleton<IPushSender, FcmPushSender>();
+        else
+            services.AddSingleton<IPushSender, LogPushSender>();
+
+        services.AddScoped<IOrderNotifier, OrderNotifier>();
+        services.AddScoped<IDeviceService, DeviceService>();
         
         return services;
     }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Non.Application.Common;
 using Non.Application.Interfaces.Repositories;
 using Non.Domain.Entities;
 using Non.Domain.Enums;
@@ -54,6 +55,16 @@ public class UserRepository : IUserRepository
 
         return (items, totalCount);
     }
+    
+    public Task<List<User>> GetTrackedByFcmTokenAsync(string token, CancellationToken ct = default) =>
+        _context.Users.Where(u => u.FcmToken == token).ToListAsync(ct);
+
+    public Task<List<FcmTarget>> GetFcmTargetsByRoleAsync(UserRole role, CancellationToken ct = default) =>
+        _context.Users
+            .AsNoTracking()
+            .Where(u => u.Role == role && u.IsActive && u.FcmToken != null && u.FcmToken != "")
+            .Select(u => new FcmTarget(u.Id, u.FcmToken!))
+            .ToListAsync(ct);
 
     public async Task AddAsync(User user, CancellationToken ct = default)
     {

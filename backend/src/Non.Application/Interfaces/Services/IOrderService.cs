@@ -20,7 +20,7 @@ public interface IOrderService
     Task<Result<OrderDetailsResponse>> CancelAsync(Guid id, CurrentUser caller, CancellationToken ct = default);
 
     Task<Result<OrderDetailsResponse>> AssignCourierAsync(
-        Guid id, AssignCourierRequest request, CancellationToken ct = default);
+        Guid id, AssignCourierRequest request, CurrentUser caller, CancellationToken ct = default);
     
     Task<Result<OrderDetailsResponse>> UpdateAsync(
         Guid id, UpdateOrderRequest request, CurrentUser caller, CancellationToken ct = default);

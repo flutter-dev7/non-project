@@ -61,7 +61,8 @@ public class OrdersController : ApiControllerBase
     public async Task<IActionResult> AssignCourier(
         Guid id, [FromBody] AssignCourierRequest request, CancellationToken ct)
     {
-        return ToActionResult(await _orderService.AssignCourierAsync(id, request, ct));
+        return ToActionResult(await _orderService.AssignCourierAsync(id, request, Caller, ct));
+        
     } 
     
     [HttpPut("{id:guid}")]

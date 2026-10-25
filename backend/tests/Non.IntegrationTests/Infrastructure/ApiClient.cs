@@ -74,6 +74,9 @@ public class ApiClient
 
     public Task<ApiResponse<T>> PutAsync<T>(string url, object? body = null) =>
         SendAsync<T>(Build(HttpMethod.Put, url, body));
+    
+    public Task<ApiResponse<T>> DeleteAsync<T>(string url) =>
+        SendAsync<T>(new HttpRequestMessage(HttpMethod.Delete, url));
 
     private static HttpRequestMessage Build(HttpMethod method, string url, object? body)
     {

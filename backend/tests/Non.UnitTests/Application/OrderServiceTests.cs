@@ -25,6 +25,7 @@ public class OrderServiceTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IUnitOfWorkTransaction> _transaction = new();
     private readonly Mock<ICacheService> _cache = new();
+    private readonly Mock<IOrderNotifier> _notifier = new();
 
     private readonly Shop _shop = new() { Name = "Саодат", IsActive = true };
     private readonly Product _product = new() { Name = "Нони тандури", Price = 5m, IsActive = true };
@@ -66,7 +67,8 @@ public class OrderServiceTests
 
         _service = new OrderService(
             _orders.Object, _shops.Object, _products.Object, _users.Object, _settings.Object,
-            _payments.Object, _debts.Object, _unitOfWork.Object, _cache.Object, new FixedTimeProvider(now));
+            _payments.Object, _debts.Object, _unitOfWork.Object, _cache.Object, _notifier.Object,
+            new FixedTimeProvider(now));
     }
 
     private void SetBalance(decimal delivered, decimal paid, decimal pending = 0m) =>

@@ -19,6 +19,7 @@ using Non.Application.DTOs.Products.Response;
 using Non.Application.DTOs.Shops.Request;
 using Non.Application.DTOs.Shops.Response;
 using Non.Application.DTOs.Debts.Response;
+using Non.Application.DTOs.Devices.Request;
 using Non.Application.Interfaces.Services;
 using Non.Domain.Entities;
 using Non.Domain.Enums;
@@ -37,6 +38,7 @@ public class ApiFixture : IAsyncLifetime
     private NonApiFactory? _factory;
 
     public CapturingSmsSender Sms { get; } = new();
+    public CapturingPushSender Push { get; } = new();
 
     public IServiceProvider Services => _factory!.Services;
     
@@ -73,6 +75,21 @@ public class ApiFixture : IAsyncLifetime
         throw new InvalidOperationException(
             "Не найден src/Non.API/appsettings.Development.json. Задай переменную окружения NON_TEST_CONNECTION.");
     }
+    
+    public async Task RegisterFcmTokenAsync(ApiClient client, string token) =>
+        (await client.PutAsync<object>("/api/devices/fcm-token", new RegisterFcmTokenRequest { Token = token })).Require();
+
+    public async Task<string?> GetFcmTokenAsync(Guid userId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        return await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.FcmToken)
+            .SingleAsync();
+    }
 
     public async Task InitializeAsync()
     {
@@ -97,7 +114,7 @@ public class ApiFixture : IAsyncLifetime
             await db.Database.MigrateAsync();
         }
 
-        _factory = new NonApiFactory(Sms);
+        _factory = new NonApiFactory(Sms, Push);
         _ = _factory.Services;
     }
     
@@ -262,10 +279,12 @@ public class ApiFixture : IAsyncLifetime
     private sealed class NonApiFactory : WebApplicationFactory<Program>
     {
         private readonly ISmsSender _sms;
+        private readonly IPushSender _push;
 
-        public NonApiFactory(ISmsSender sms)
+        public NonApiFactory(ISmsSender sms, IPushSender push)
         {
             _sms = sms;
+            _push = push;
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -277,6 +296,9 @@ public class ApiFixture : IAsyncLifetime
             {
                 services.RemoveAll<ISmsSender>();
                 services.AddSingleton(_sms);
+
+                services.RemoveAll<IPushSender>();
+                services.AddSingleton(_push);
             });
         }
     }

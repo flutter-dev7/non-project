@@ -24,6 +24,7 @@ public class OrderService : IOrderService
     private readonly IDebtService _debtService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cacheService;
+    private readonly IOrderNotifier _notifier;
     private readonly TimeProvider _timeProvider;
 
     public OrderService(
@@ -36,6 +37,7 @@ public class OrderService : IOrderService
         IDebtService debtService,
         IUnitOfWork unitOfWork,
         ICacheService cacheService,
+        IOrderNotifier notifier,
         TimeProvider timeProvider)
     {
         _orderRepository = orderRepository;
@@ -47,6 +49,7 @@ public class OrderService : IOrderService
         _debtService = debtService;
         _unitOfWork = unitOfWork;
         _cacheService = cacheService;
+        _notifier = notifier;
         _timeProvider = timeProvider;
     }
 
@@ -177,85 +180,10 @@ public class OrderService : IOrderService
         await _unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
-        return await ReloadAsync(order.Id, ct);
+        return await ReloadAndNotifyAsync(order.Id, OrderEvent.Created, caller, ct);
     }
 
-    public async Task<Result<OrderDetailsResponse>> ChangeStatusAsync(
-        Guid id, ChangeOrderStatusRequest request, CurrentUser caller, CancellationToken ct = default)
-    {
-        if (request.Status == OrderStatus.Cancelled)
-            return Result<OrderDetailsResponse>.Failure("Для отмены заказа используйте отдельную операцию отмены.");
-
-        var order = await _orderRepository.GetByIdAsync(id, ct);
-        if (order is null)
-            return Result<OrderDetailsResponse>.Failure("Заказ не найден.", ErrorType.NotFound);
-
-        if (caller.Role == UserRole.Courier)
-        {
-            if (order.CourierId != caller.Id)
-                return Result<OrderDetailsResponse>.Failure("Этот заказ назначен не вам.", ErrorType.Forbidden);
-
-            if (request.Status is not (OrderStatus.OnTheWay or OrderStatus.Delivered))
-                return Result<OrderDetailsResponse>.Failure(
-                    "Курьер может только забрать заказ (В пути) или отметить его доставленным.", ErrorType.Forbidden);
-        }
-        else if (caller.Role != UserRole.Admin)
-        {
-            return Result<OrderDetailsResponse>.Failure("Недостаточно прав.", ErrorType.Forbidden);
-        }
-
-        if (request.Status == OrderStatus.OnTheWay && order.CourierId is null)
-            return Result<OrderDetailsResponse>.Failure("Сначала назначьте курьера.");
-
-        if (request.Status != OrderStatus.Delivered && request.PaymentAmount.HasValue)
-            return Result<OrderDetailsResponse>.Failure("Сумма оплаты указывается только при доставке.");
-
-        if (request.Status == OrderStatus.Delivered)
-            return await DeliverAsync(order, request, caller, ct);
-
-        try
-        {
-            order.ChangeStatus(request.Status, caller.Id);
-        }
-        catch (DomainException ex)
-        {
-            return Result<OrderDetailsResponse>.Failure(ex.Message);
-        }
-
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        return await ReloadAsync(order.Id, ct);
-    }
-
-    public async Task<Result<OrderDetailsResponse>> CancelAsync(
-        Guid id, CurrentUser caller, CancellationToken ct = default)
-    {
-        var order = await _orderRepository.GetByIdAsync(id, ct);
-        if (order is null)
-            return Result<OrderDetailsResponse>.Failure("Заказ не найден.", ErrorType.NotFound);
-
-        if (!await CanManageAsync(order, caller, ct))
-            return Result<OrderDetailsResponse>.Failure("Недостаточно прав для отмены этого заказа.", ErrorType.Forbidden);
-
-        var windowError = await ValidateChangeWindowAsync(order, caller.Role, ct);
-        if (windowError is not null)
-            return Result<OrderDetailsResponse>.Failure(windowError);
-
-        try
-        {
-            order.Cancel(caller.Id);
-        }
-        catch (DomainException ex)
-        {
-            return Result<OrderDetailsResponse>.Failure(ex.Message);
-        }
-
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        return await ReloadAsync(order.Id, ct);
-    }
-    
-        public async Task<Result<OrderDetailsResponse>> UpdateAsync(
+    public async Task<Result<OrderDetailsResponse>> UpdateAsync(
         Guid id, UpdateOrderRequest request, CurrentUser caller, CancellationToken ct = default)
     {
         var order = await _orderRepository.GetWithItemsForUpdateAsync(id, ct);
@@ -338,11 +266,86 @@ public class OrderService : IOrderService
         await _unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
-        return await ReloadAsync(order.Id, ct);
+        return await ReloadAndNotifyAsync(order.Id, OrderEvent.Updated, caller, ct);
+    }
+
+    public async Task<Result<OrderDetailsResponse>> ChangeStatusAsync(
+        Guid id, ChangeOrderStatusRequest request, CurrentUser caller, CancellationToken ct = default)
+    {
+        if (request.Status == OrderStatus.Cancelled)
+            return Result<OrderDetailsResponse>.Failure("Для отмены заказа используйте отдельную операцию отмены.");
+
+        var order = await _orderRepository.GetByIdAsync(id, ct);
+        if (order is null)
+            return Result<OrderDetailsResponse>.Failure("Заказ не найден.", ErrorType.NotFound);
+
+        if (caller.Role == UserRole.Courier)
+        {
+            if (order.CourierId != caller.Id)
+                return Result<OrderDetailsResponse>.Failure("Этот заказ назначен не вам.", ErrorType.Forbidden);
+
+            if (request.Status is not (OrderStatus.OnTheWay or OrderStatus.Delivered))
+                return Result<OrderDetailsResponse>.Failure(
+                    "Курьер может только забрать заказ (В пути) или отметить его доставленным.", ErrorType.Forbidden);
+        }
+        else if (caller.Role != UserRole.Admin)
+        {
+            return Result<OrderDetailsResponse>.Failure("Недостаточно прав.", ErrorType.Forbidden);
+        }
+
+        if (request.Status == OrderStatus.OnTheWay && order.CourierId is null)
+            return Result<OrderDetailsResponse>.Failure("Сначала назначьте курьера.");
+
+        if (request.Status != OrderStatus.Delivered && request.PaymentAmount.HasValue)
+            return Result<OrderDetailsResponse>.Failure("Сумма оплаты указывается только при доставке.");
+
+        if (request.Status == OrderStatus.Delivered)
+            return await DeliverAsync(order, request, caller, ct);
+
+        try
+        {
+            order.ChangeStatus(request.Status, caller.Id);
+        }
+        catch (DomainException ex)
+        {
+            return Result<OrderDetailsResponse>.Failure(ex.Message);
+        }
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return await ReloadAndNotifyAsync(order.Id, OrderEvent.StatusChanged, caller, ct);
+    }
+
+    public async Task<Result<OrderDetailsResponse>> CancelAsync(
+        Guid id, CurrentUser caller, CancellationToken ct = default)
+    {
+        var order = await _orderRepository.GetByIdAsync(id, ct);
+        if (order is null)
+            return Result<OrderDetailsResponse>.Failure("Заказ не найден.", ErrorType.NotFound);
+
+        if (!await CanManageAsync(order, caller, ct))
+            return Result<OrderDetailsResponse>.Failure("Недостаточно прав для отмены этого заказа.", ErrorType.Forbidden);
+
+        var windowError = await ValidateChangeWindowAsync(order, caller.Role, ct);
+        if (windowError is not null)
+            return Result<OrderDetailsResponse>.Failure(windowError);
+
+        try
+        {
+            order.Cancel(caller.Id);
+        }
+        catch (DomainException ex)
+        {
+            return Result<OrderDetailsResponse>.Failure(ex.Message);
+        }
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return await ReloadAndNotifyAsync(order.Id, OrderEvent.Cancelled, caller, ct);
     }
 
     public async Task<Result<OrderDetailsResponse>> AssignCourierAsync(
-        Guid id, AssignCourierRequest request, CancellationToken ct = default)
+        Guid id, AssignCourierRequest request, CurrentUser caller, CancellationToken ct = default)
     {
         var order = await _orderRepository.GetByIdAsync(id, ct);
         if (order is null)
@@ -361,7 +364,7 @@ public class OrderService : IOrderService
         order.CourierId = courier.Id;
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return await ReloadAsync(order.Id, ct);
+        return await ReloadAndNotifyAsync(order.Id, OrderEvent.CourierAssigned, caller, ct);
     }
 
     private async Task<Result<OrderDetailsResponse>> DeliverAsync(
@@ -416,7 +419,7 @@ public class OrderService : IOrderService
         await _unitOfWork.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
-        return await ReloadAsync(order.Id, ct);
+        return await ReloadAndNotifyAsync(order.Id, OrderEvent.StatusChanged, caller, ct);
     }
 
     private async Task<Result<Shop>> ResolveShopAsync(
@@ -472,35 +475,6 @@ public class OrderService : IOrderService
         return null;
     }
 
-    private async Task<TimeOnly> GetCutoffTimeAsync(CancellationToken ct)
-    {
-        var value = await _cacheService.GetOrCreateAsync(
-            CacheKeys.OrderCutoffTime,
-            async () => await _settingRepository.GetValueAsync(SettingKeys.OrderCutoffTime, ct)
-                        ?? SettingDefaults.OrderCutoffTime,
-            CutoffCacheDuration);
-
-        return TimeOnly.TryParse(value, CultureInfo.InvariantCulture, out var cutoff)
-            ? cutoff
-            : TimeOnly.Parse(SettingDefaults.OrderCutoffTime, CultureInfo.InvariantCulture);
-    }
-
-    private async Task<bool> IsShopOwnerAsync(Guid shopId, Guid userId, CancellationToken ct)
-    {
-        var shop = await _shopRepository.GetDetailsByOwnerIdAsync(userId, ct);
-
-        return shop?.Id == shopId;
-    }
-    
-    private async Task<bool> CanManageAsync(Order order, CurrentUser caller, CancellationToken ct) =>
-        caller.Role switch
-        {
-            UserRole.Admin => true,
-            UserRole.Agent => order.CreatedByUserId == caller.Id,
-            UserRole.Shop => await IsShopOwnerAsync(order.ShopId, caller.Id, ct),
-            _ => false
-        };
-
     private async Task<string?> ValidateChangeWindowAsync(Order order, UserRole role, CancellationToken ct)
     {
         if (role == UserRole.Admin)
@@ -523,9 +497,41 @@ public class OrderService : IOrderService
         return null;
     }
 
-    private async Task<Result<OrderDetailsResponse>> ReloadAsync(Guid id, CancellationToken ct)
+    private async Task<TimeOnly> GetCutoffTimeAsync(CancellationToken ct)
+    {
+        var value = await _cacheService.GetOrCreateAsync(
+            CacheKeys.OrderCutoffTime,
+            async () => await _settingRepository.GetValueAsync(SettingKeys.OrderCutoffTime, ct)
+                        ?? SettingDefaults.OrderCutoffTime,
+            CutoffCacheDuration);
+
+        return TimeOnly.TryParse(value, CultureInfo.InvariantCulture, out var cutoff)
+            ? cutoff
+            : TimeOnly.Parse(SettingDefaults.OrderCutoffTime, CultureInfo.InvariantCulture);
+    }
+
+    private async Task<bool> CanManageAsync(Order order, CurrentUser caller, CancellationToken ct) =>
+        caller.Role switch
+        {
+            UserRole.Admin => true,
+            UserRole.Agent => order.CreatedByUserId == caller.Id,
+            UserRole.Shop => await IsShopOwnerAsync(order.ShopId, caller.Id, ct),
+            _ => false
+        };
+
+    private async Task<bool> IsShopOwnerAsync(Guid shopId, Guid userId, CancellationToken ct)
+    {
+        var shop = await _shopRepository.GetDetailsByOwnerIdAsync(userId, ct);
+
+        return shop?.Id == shopId;
+    }
+
+    private async Task<Result<OrderDetailsResponse>> ReloadAndNotifyAsync(
+        Guid id, OrderEvent kind, CurrentUser actor, CancellationToken ct)
     {
         var order = await _orderRepository.GetDetailsByIdAsync(id, ct);
+
+        await _notifier.NotifyAsync(kind, order!, actor, ct);
 
         return Result<OrderDetailsResponse>.Success(ToDetails(order!));
     }
