@@ -45,8 +45,12 @@ namespace Non.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    FirstName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    LastName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    FullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Email = table.Column<string>(type: "character varying(254)", maxLength: 254, nullable: true),
+                    PasswordHash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "boolean", nullable: false),
                     Role = table.Column<int>(type: "integer", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     FcmToken = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
@@ -55,6 +59,29 @@ namespace Non.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TokenHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RevokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ReplacedByTokenId = table.Column<Guid>(type: "uuid", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -300,7 +327,8 @@ namespace Non.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_ReversalOfPaymentId",
                 table: "Payments",
-                column: "ReversalOfPaymentId");
+                column: "ReversalOfPaymentId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_ShopId",
@@ -308,9 +336,27 @@ namespace Non.Infrastructure.Migrations
                 column: "ShopId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_TokenHash",
+                table: "RefreshTokens",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
+                table: "RefreshTokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Shops_UserId",
                 table: "Shops",
-                column: "UserId");
+                column: "UserId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_Phone",
@@ -319,14 +365,14 @@ namespace Non.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Visits_AgentId",
+                name: "IX_Visits_AgentId_VisitedAt",
                 table: "Visits",
-                column: "AgentId");
+                columns: new[] { "AgentId", "VisitedAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Visits_ShopId",
+                name: "IX_Visits_ShopId_VisitedAt",
                 table: "Visits",
-                column: "ShopId");
+                columns: new[] { "ShopId", "VisitedAt" });
         }
 
         /// <inheritdoc />
@@ -340,6 +386,9 @@ namespace Non.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Payments");
+
+            migrationBuilder.DropTable(
+                name: "RefreshTokens");
 
             migrationBuilder.DropTable(
                 name: "Settings");

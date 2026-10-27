@@ -312,6 +312,13 @@ namespace Non.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("FcmToken")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -329,6 +336,10 @@ namespace Non.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -338,6 +349,9 @@ namespace Non.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.HasIndex("Phone")
                         .IsUnique();

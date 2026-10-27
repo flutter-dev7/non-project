@@ -16,8 +16,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.FirstName).IsRequired().HasMaxLength(100);
         builder.Property(u => u.LastName).IsRequired().HasMaxLength(100);
         builder.Property(u => u.Phone).IsRequired().HasMaxLength(20);
+        builder.Property(u => u.Email).HasMaxLength(254);
+        builder.Property(u => u.PasswordHash).HasMaxLength(500);
         builder.Property(u => u.FcmToken).HasMaxLength(500);
 
         builder.HasIndex(u => u.Phone).IsUnique();
+        builder.HasIndex(u => u.Email).IsUnique();
     }
 }

@@ -37,8 +37,11 @@ public class ApiFixture : IAsyncLifetime
 
     private NonApiFactory? _factory;
 
-    public CapturingSmsSender Sms { get; } = new();
-    public CapturingPushSender Push { get; } = new();
+    public const string TestPassword = "Test12345";
+
+    private string? _testPasswordHash;
+
+    public CapturingEmailSender Email { get; } = new();    public CapturingPushSender Push { get; } = new();
 
     public IServiceProvider Services => _factory!.Services;
     
@@ -114,25 +117,51 @@ public class ApiFixture : IAsyncLifetime
             await db.Database.MigrateAsync();
         }
 
-        _factory = new NonApiFactory(Sms, Push);
+        _factory = new NonApiFactory(Email, Push);
         _ = _factory.Services;
     }
     
-    public Task ClearOtpCooldownAsync(string phone) =>
-        Services.GetRequiredService<ICacheService>().RemoveAsync(CacheKeys.OtpCooldown(phone));
+    public async Task<string> GetEmailAsync(Guid userId)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        return await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.Email!)
+            .SingleAsync();
+    }
+
+    public async Task ClearAuthThrottlesAsync(string email)
+    {
+        var cache = Services.GetRequiredService<ICacheService>();
+        var normalized = email.ToLowerInvariant();
+
+        await cache.RemoveAsync(AuthCacheKeys.Cooldown(EmailCodePurpose.EmailVerification, normalized));
+        await cache.RemoveAsync(AuthCacheKeys.Cooldown(EmailCodePurpose.PasswordReset, normalized));
+        await cache.RemoveAsync(AuthCacheKeys.LoginFailures(normalized));
+    }
 
     public async Task<AuthResponse> LoginAsync(string phone)
     {
-        await ClearOtpCooldownAsync(phone);
+        string email;
 
-        var anonymous = CreateAnonymousClient();
+        using (var scope = Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        (await anonymous.PostAsync<object>("/api/auth/send-code", new SendCodeRequest { Phone = phone })).Require();
+            email = await db.Users
+                .AsNoTracking()
+                .Where(u => u.Phone == phone)
+                .Select(u => u.Email!)
+                .SingleAsync();
+        }
 
-        var code = Sms.GetCode(phone) ?? throw new InvalidOperationException("Код не был отправлен.");
+        await ClearAuthThrottlesAsync(email);
 
-        return (await anonymous.PostAsync<AuthResponse>("/api/auth/verify",
-            new VerifyCodeRequest { Phone = phone, Code = code })).Require();
+        return (await CreateAnonymousClient().PostAsync<AuthResponse>("/api/auth/login",
+            new LoginRequest { Email = email, Password = TestPassword })).Require();
     }
 
     public async Task DisposeAsync()
@@ -154,15 +183,21 @@ public class ApiFixture : IAsyncLifetime
     public async Task<ApiClient> CreateUserAsync(UserRole role)
     {
         var phone = "+9929" + Random.Shared.Next(0, 100_000_000).ToString("D8");
+        var email = $"user-{Guid.NewGuid():N}@test.local";
 
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        _testPasswordHash ??= scope.ServiceProvider.GetRequiredService<IPasswordService>().Hash(TestPassword);
 
         var user = new User
         {
             FirstName = "Тест",
             LastName = role.ToString(),
             Phone = phone,
+            Email = email,
+            EmailConfirmed = true,
+            PasswordHash = _testPasswordHash,
             Role = role,
             IsActive = true
         };
@@ -278,12 +313,12 @@ public class ApiFixture : IAsyncLifetime
 
     private sealed class NonApiFactory : WebApplicationFactory<Program>
     {
-        private readonly ISmsSender _sms;
+        private readonly IEmailSender _email;
         private readonly IPushSender _push;
 
-        public NonApiFactory(ISmsSender sms, IPushSender push)
+        public NonApiFactory(IEmailSender email, IPushSender push)
         {
-            _sms = sms;
+            _email = email;
             _push = push;
         }
 
@@ -294,8 +329,8 @@ public class ApiFixture : IAsyncLifetime
 
             builder.ConfigureTestServices(services =>
             {
-                services.RemoveAll<ISmsSender>();
-                services.AddSingleton(_sms);
+                services.RemoveAll<IEmailSender>();
+                services.AddSingleton(_email);
 
                 services.RemoveAll<IPushSender>();
                 services.AddSingleton(_push);

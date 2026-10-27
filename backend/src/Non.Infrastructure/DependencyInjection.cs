@@ -25,7 +25,12 @@ public static class DependencyInjection
 
         services.AddMemoryCache();
         services.AddSingleton<ICacheService, CacheService>();
-        services.AddSingleton<ISmsSender, LogSmsSender>();
+        if (!string.IsNullOrWhiteSpace(configuration["Email:BrevoApiKey"]))
+            services.AddHttpClient<IEmailSender, BrevoEmailSender>();
+        else
+            services.AddSingleton<IEmailSender, LogEmailSender>();
+
+        services.AddSingleton<IPasswordService, PasswordService>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();

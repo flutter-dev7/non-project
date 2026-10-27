@@ -17,6 +17,10 @@ public class CreateUserRequest
     [StringLength(20)]
     public string Phone { get; set; } = string.Empty;
 
+    [Required]
+    [StringLength(254)]
+    public string Email { get; set; } = string.Empty;
+
     [EnumDataType(typeof(UserRole))]
     public UserRole Role { get; set; }
 }

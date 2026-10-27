@@ -57,6 +57,13 @@ public class UserService : IUserService
 
         if (firstName.Length == 0 || lastName.Length == 0)
             return Result<UserDetailsResponse>.Failure("Укажите имя и фамилию.");
+        
+        var email = EmailNormalizer.Normalize(request.Email);
+        if (email is null)
+            return Result<UserDetailsResponse>.Failure("Неверный email.");
+        
+        if (await _userRepository.GetByEmailAsync(email, ct) is not null)
+            return Result<UserDetailsResponse>.Failure("Пользователь с таким email уже существует.", ErrorType.Conflict);
 
         if (await _userRepository.GetByPhoneAsync(phone, ct) is not null)
             return Result<UserDetailsResponse>.Failure("Пользователь с таким номером уже существует.", ErrorType.Conflict);
@@ -66,6 +73,8 @@ public class UserService : IUserService
             FirstName = firstName,
             LastName = lastName,
             Phone = phone,
+            Email = email,
+            EmailConfirmed = false,
             Role = request.Role,
             IsActive = true
         };
@@ -91,6 +100,23 @@ public class UserService : IUserService
 
         if (firstName.Length == 0 || lastName.Length == 0)
             return Result<UserDetailsResponse>.Failure("Укажите имя и фамилию.");
+        
+        if (request.Email is not null)
+        {
+            var email = EmailNormalizer.Normalize(request.Email);
+            if (email is null)
+                return Result<UserDetailsResponse>.Failure("Неверный email.");
+
+            if (!string.Equals(email, user.Email, StringComparison.Ordinal))
+            {
+                var other = await _userRepository.GetByEmailAsync(email, ct);
+                if (other is not null && other.Id != user.Id)
+                    return Result<UserDetailsResponse>.Failure("Пользователь с таким email уже существует.", ErrorType.Conflict);
+
+                user.Email = email;
+                user.EmailConfirmed = false;
+            }
+        }
 
         user.FirstName = firstName;
         user.LastName = lastName;
@@ -109,6 +135,8 @@ public class UserService : IUserService
         LastName = user.LastName,
         FullName = user.FullName,
         Phone = user.Phone,
+        Email = user.Email,
+        EmailConfirmed = user.EmailConfirmed,
         Role = user.Role.ToString(),
         IsActive = user.IsActive,
         CreatedAt = user.CreatedAt

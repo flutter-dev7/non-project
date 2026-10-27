@@ -18,6 +18,10 @@ public interface IUserRepository
     Task<List<User>> GetTrackedByFcmTokenAsync(string token, CancellationToken ct = default);
 
     Task<List<FcmTarget>> GetFcmTargetsByRoleAsync(UserRole role, CancellationToken ct = default);
+    
+    Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
+
+    Task<User?> GetTrackedByEmailAsync(string email, CancellationToken ct = default);
 
     Task AddAsync(User user, CancellationToken ct = default);
 }

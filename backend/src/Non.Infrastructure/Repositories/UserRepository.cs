@@ -65,6 +65,12 @@ public class UserRepository : IUserRepository
             .Where(u => u.Role == role && u.IsActive && u.FcmToken != null && u.FcmToken != "")
             .Select(u => new FcmTarget(u.Id, u.FcmToken!))
             .ToListAsync(ct);
+    
+    public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
+        _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == email, ct);
+
+    public Task<User?> GetTrackedByEmailAsync(string email, CancellationToken ct = default) =>
+        _context.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
 
     public async Task AddAsync(User user, CancellationToken ct = default)
     {

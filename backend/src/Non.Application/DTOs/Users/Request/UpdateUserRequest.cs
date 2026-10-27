@@ -13,6 +13,9 @@ public class UpdateUserRequest
     [StringLength(100, MinimumLength = 2)]
     public string LastName { get; set; } = string.Empty;
 
+    [StringLength(254)]
+    public string? Email { get; set; }
+
     [EnumDataType(typeof(UserRole))]
     public UserRole Role { get; set; }
 
