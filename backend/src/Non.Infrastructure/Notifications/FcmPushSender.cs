@@ -2,6 +2,7 @@ using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Non.Application.Common;
 using Non.Application.Interfaces.Services;
@@ -13,16 +14,27 @@ public sealed class FcmPushSender : IPushSender
     private readonly FirebaseMessaging _messaging;
     private readonly ILogger<FcmPushSender> _logger;
 
-    public FcmPushSender(IConfiguration configuration, ILogger<FcmPushSender> logger)
+    public FcmPushSender(IConfiguration configuration, IHostEnvironment environment, ILogger<FcmPushSender> logger)
     {
         _logger = logger;
 
         var json = configuration["Firebase:CredentialsJson"];
         var path = configuration["Firebase:CredentialsPath"];
 
-        var credential = !string.IsNullOrWhiteSpace(json)
-            ? GoogleCredential.FromJson(json)
-            : GoogleCredential.FromFile(path);
+        GoogleCredential credential;
+
+        if (!string.IsNullOrWhiteSpace(json))
+        {
+            credential = GoogleCredential.FromJson(json);
+        }
+        else
+        {
+            var fullPath = Path.IsPathRooted(path!)
+                ? path!
+                : Path.Combine(environment.ContentRootPath, path!);
+
+            credential = GoogleCredential.FromFile(fullPath);
+        }
 
         var app = FirebaseApp.DefaultInstance ?? FirebaseApp.Create(new AppOptions { Credential = credential });
 
