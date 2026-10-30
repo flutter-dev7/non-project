@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:non_app/features/orders/presentation/pages/catalog_page.dart';
+import 'package:non_app/features/orders/presentation/pages/courier_history_page.dart';
+import 'package:non_app/features/orders/presentation/pages/courier_today_page.dart';
 import 'package:non_app/features/orders/presentation/pages/orders_page.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -70,21 +72,13 @@ List<NavTab> tabsFor(UserRole role) {
           label: 'Сегодня',
           icon: PhosphorIconsRegular.truck,
           selectedIcon: PhosphorIconsFill.truck,
-          page: _Soon(
-            title: 'Доставка сегодня',
-            icon: PhosphorIconsBold.truck,
-            message: 'Здесь будут заказы на сегодня',
-          ),
+          page: CourierTodayPage(),
         ),
         NavTab(
           label: 'История',
           icon: PhosphorIconsRegular.clockCounterClockwise,
           selectedIcon: PhosphorIconsFill.clockCounterClockwise,
-          page: _Soon(
-            title: 'История',
-            icon: PhosphorIconsBold.clockCounterClockwise,
-            message: 'Здесь будут выполненные доставки',
-          ),
+          page: CourierHistoryPage(),
         ),
         _profileTab,
       ];

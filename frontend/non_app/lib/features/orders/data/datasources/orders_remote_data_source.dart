@@ -3,6 +3,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/order_draft.dart';
 import '../../domain/entities/order_status.dart';
+import '../../domain/entities/payment_method.dart';
 import '../models/order_model.dart';
 
 class OrdersRemoteDataSource {
@@ -12,6 +13,9 @@ class OrdersRemoteDataSource {
 
   Future<PagedResult<OrderModel>> getOrders({
     OrderStatus? status,
+    String? courierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
     required int page,
     required int pageSize,
   }) async {
@@ -21,6 +25,9 @@ class OrdersRemoteDataSource {
         'Page': '$page',
         'PageSize': '$pageSize',
         if (status != null) 'Status': status.apiName,
+        if (courierId != null) 'CourierId': courierId,
+        if (dateFrom != null) 'DeliveryDateFrom': Formatters.apiDate(dateFrom),
+        if (dateTo != null) 'DeliveryDateTo': Formatters.apiDate(dateTo),
       },
     ).toString();
 
@@ -55,5 +62,21 @@ class OrdersRemoteDataSource {
 
   Future<void> cancelOrder(String id) async {
     await _client.post('/api/Orders/$id/cancel');
+  }
+
+  Future<void> changeStatus(
+    String id,
+    OrderStatus status, {
+    double? paymentAmount,
+    PaymentMethod? paymentMethod,
+  }) async {
+    await _client.put(
+      '/api/Orders/$id/status',
+      data: {
+        'status': status.apiName,
+        if (paymentAmount != null) 'paymentAmount': paymentAmount,
+        if (paymentMethod != null) 'paymentMethod': paymentMethod.apiName,
+      },
+    );
   }
 }

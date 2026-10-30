@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:non_app/features/orders/domain/usecases/change_order_status_usecase.dart';
 
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/providers/core_providers.dart';
@@ -16,28 +17,42 @@ import '../../domain/usecases/get_orders_usecase.dart';
 import '../../domain/usecases/update_order_usecase.dart';
 
 final ordersRepositoryProvider = Provider<OrdersRepository>((ref) {
-  return OrdersRepositoryImpl(OrdersRemoteDataSource(ref.watch(apiClientProvider)));
+  return OrdersRepositoryImpl(
+    OrdersRemoteDataSource(ref.watch(apiClientProvider)),
+  );
 });
 
-final getOrdersUseCaseProvider =
-    Provider((ref) => GetOrdersUseCase(ref.watch(ordersRepositoryProvider)));
-final getOrderUseCaseProvider =
-    Provider((ref) => GetOrderUseCase(ref.watch(ordersRepositoryProvider)));
-final createOrderUseCaseProvider =
-    Provider((ref) => CreateOrderUseCase(ref.watch(ordersRepositoryProvider)));
-final updateOrderUseCaseProvider =
-    Provider((ref) => UpdateOrderUseCase(ref.watch(ordersRepositoryProvider)));
-final cancelOrderUseCaseProvider =
-    Provider((ref) => CancelOrderUseCase(ref.watch(ordersRepositoryProvider)));
+final getOrdersUseCaseProvider = Provider(
+  (ref) => GetOrdersUseCase(ref.watch(ordersRepositoryProvider)),
+);
+final getOrderUseCaseProvider = Provider(
+  (ref) => GetOrderUseCase(ref.watch(ordersRepositoryProvider)),
+);
+final createOrderUseCaseProvider = Provider(
+  (ref) => CreateOrderUseCase(ref.watch(ordersRepositoryProvider)),
+);
+final updateOrderUseCaseProvider = Provider(
+  (ref) => UpdateOrderUseCase(ref.watch(ordersRepositoryProvider)),
+);
+final cancelOrderUseCaseProvider = Provider(
+  (ref) => CancelOrderUseCase(ref.watch(ordersRepositoryProvider)),
+);
+final changeOrderStatusUseCaseProvider = Provider(
+  (ref) => ChangeOrderStatusUseCase(ref.watch(ordersRepositoryProvider)),
+);
 
-final orderDetailsProvider = FutureProvider.autoDispose.family<Order, String>((ref, id) {
+final orderDetailsProvider = FutureProvider.autoDispose.family<Order, String>((
+  ref,
+  id,
+) {
   return ref.watch(getOrderUseCaseProvider)(id);
 });
 
 // Корзина
 
-final cartProvider =
-    NotifierProvider<CartNotifier, Map<String, OrderLine>>(CartNotifier.new);
+final cartProvider = NotifierProvider<CartNotifier, Map<String, OrderLine>>(
+  CartNotifier.new,
+);
 
 class CartNotifier extends Notifier<Map<String, OrderLine>> {
   @override
@@ -72,8 +87,9 @@ extension CartTotals on Map<String, OrderLine> {
 
 // Список заказов с фильтром и подгрузкой страниц
 
-final orderFilterProvider =
-    NotifierProvider<OrderFilterNotifier, OrderStatus?>(OrderFilterNotifier.new);
+final orderFilterProvider = NotifierProvider<OrderFilterNotifier, OrderStatus?>(
+  OrderFilterNotifier.new,
+);
 
 class OrderFilterNotifier extends Notifier<OrderStatus?> {
   @override
@@ -113,7 +129,9 @@ class OrdersState {
 const int _ordersPageSize = 20;
 
 final ordersProvider =
-    AsyncNotifierProvider.autoDispose<OrdersNotifier, OrdersState>(OrdersNotifier.new);
+    AsyncNotifierProvider.autoDispose<OrdersNotifier, OrdersState>(
+      OrdersNotifier.new,
+    );
 
 class OrdersNotifier extends AutoDisposeAsyncNotifier<OrdersState> {
   @override

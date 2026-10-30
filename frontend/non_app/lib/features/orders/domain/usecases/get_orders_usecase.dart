@@ -10,9 +10,19 @@ class GetOrdersUseCase {
 
   Future<PagedResult<Order>> call({
     OrderStatus? status,
+    String? courierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
     required int page,
     required int pageSize,
   }) {
-    return _repository.getOrders(status: status, page: page, pageSize: pageSize);
+    return _repository.getOrders(
+      status: status,
+      courierId: courierId,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      page: page,
+      pageSize: pageSize,
+    );
   }
 }

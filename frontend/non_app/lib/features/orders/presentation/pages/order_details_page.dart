@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:non_app/core/utils/launcher.dart';
 import 'package:non_app/core/widgets/app_dialogs.dart';
+import 'package:non_app/features/auth/domain/entities/user_role.dart';
+import 'package:non_app/features/auth/presentation/providers/auth_providers.dart';
+import 'package:non_app/features/orders/presentation/widgets/courier_action_button.dart';
 
 import '../../../../core/constants/app_icons.dart';
 import '../../../../core/network/api_exception.dart';
@@ -55,9 +59,14 @@ class OrderDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final order = ref.watch(orderDetailsProvider(orderId));
+    final role = ref.watch(authProvider.select((state) => state.valueOrNull?.role));
+    final isShop = role == UserRole.shop;
+    final isCourier = role == UserRole.courier;
 
     return Scaffold(
-      appBar: AppTopBar(title: order.valueOrNull == null ? 'Заказ' : 'Заказ №${order.value!.number}'),
+      appBar: AppTopBar(
+        title: order.valueOrNull == null ? 'Заказ' : 'Заказ №${order.value!.number}',
+      ),
       body: order.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -69,6 +78,10 @@ class OrderDetailsPage extends ConsumerWidget {
           children: [
             _HeaderCard(order: data),
             const SizedBox(height: 16),
+            if (!isShop) ...[
+              _ShopCard(order: data),
+              const SizedBox(height: 16),
+            ],
             _InfoCard(order: data),
             const SizedBox(height: 16),
             _ItemsCard(order: data),
@@ -76,7 +89,11 @@ class OrderDetailsPage extends ConsumerWidget {
               const SizedBox(height: 16),
               _HistoryCard(order: data),
             ],
-            if (data.canEdit || data.canCancel) ...[
+            if (isCourier && nextCourierStatus(data) != null) ...[
+              const SizedBox(height: 20),
+              CourierActionButton(order: data),
+            ],
+            if (isShop && (data.canEdit || data.canCancel)) ...[
               const SizedBox(height: 20),
               if (data.canEdit)
                 OutlinedButton.icon(
@@ -330,6 +347,52 @@ class _HistoryCard extends StatelessWidget {
                   ],
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopCard extends StatelessWidget {
+  const _ShopCard({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.shopName,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    order.shopAddress,
+                    style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    order.shopPhone,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            AppIconButton(
+              icon: AppIcons.phone,
+              tooltip: 'Позвонить',
+              onPressed: () => callPhone(context, order.shopPhone),
+            ),
           ],
         ),
       ),
