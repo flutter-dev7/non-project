@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/app-layout'
 import { LoginPage } from '@/features/auth/login-page'
 import { RequireAdmin } from '@/features/auth/require-admin'
 import { PlaceholderPage } from '@/pages/placeholder-page'
+import { OrdersPage } from '@/features/orders/orders-page'
 
 export default function App() {
   return (
@@ -14,7 +15,7 @@ export default function App() {
         <Route element={<RequireAdmin />}>
           <Route element={<AppLayout />}>
             <Route index element={<Navigate to="/orders" replace />} />
-            <Route path="orders" element={<PlaceholderPage title="Заказы" />} />
+            <Route path="orders" element={<OrdersPage />} />   
             <Route path="plan" element={<PlaceholderPage title="План" />} />
             <Route path="shops" element={<PlaceholderPage title="Магазины и долги" />} />
             <Route path="products" element={<PlaceholderPage title="Товары" />} />
