@@ -130,6 +130,16 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Admin", policy => policy
+        .WithOrigins(corsOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
 await DbSeeder.SeedAsync(app.Services);
@@ -149,6 +159,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseRateLimiter();
+app.UseCors("Admin");
 app.UseAuthentication();
 app.UseAuthorization();
 
