@@ -1,113 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:non_app/features/home/data/models/nav_tab.dart';
 
-import '../../../../core/constants/app_icons.dart';
-import '../../../../core/network/api_exception.dart';
-import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_decor.dart';
-import '../../../../core/utils/app_snackbar.dart';
-import '../../../../core/widgets/app_logo.dart';
-import '../../../../core/widgets/app_top_bar.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
-  Future<void> _logout(BuildContext context, WidgetRef ref) async {
-    try {
-      await ref.read(authProvider.notifier).logout();
-    } on ApiException catch (e) {
-      if (context.mounted) {
-        AppSnackBar.show(context, e.message, isError: true);
-      }
-    }
-  }
+  @override
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  int _index = 0;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).valueOrNull;
 
-    return Scaffold(
-      appBar: AppTopBar(
-        showBack: false,
-        titleWidget: const AppWordmark(size: 28),
-        actions: [
-          AppIconButton(
-            icon: AppIcons.logout,
-            tooltip: 'Выйти',
-            onPressed: () => _logout(context, ref),
+    if (user == null) return const SizedBox.shrink();
+
+    final tabs = tabsFor(user.role);
+    final index = _index.clamp(0, tabs.length - 1);
+
+    return PopScope(
+      canPop: index == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _index = 0);
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: index,
+          children: [for (final tab in tabs) tab.page],
+        ),
+        bottomNavigationBar: DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: AppColors.border)),
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: AppDecor.heroGradient,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Здравствуйте,',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+          child: NavigationBar(
+            height: 68,
+            elevation: 0,
+            selectedIndex: index,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            onDestinationSelected: (value) => setState(() => _index = value),
+            destinations: [
+              for (final tab in tabs)
+                NavigationDestination(
+                  icon: Icon(tab.icon),
+                  selectedIcon: Icon(tab.selectedIcon),
+                  label: tab.label,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  user?.fullName ?? '',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    user?.role.label ?? '',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Card(
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 6,
-              ),
-              leading: const Icon(AppIcons.password, color: AppDecor.heroMid),
-              title: const Text(
-                'Сменить пароль',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              trailing: const Icon(
-                AppIcons.forward,
-                size: 18,
-                color: AppColors.muted,
-              ),
-              onTap: () => context.push(AppRoutes.changePassword),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

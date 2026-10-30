@@ -25,4 +25,5 @@ class AppIcons {
   static const IconData refresh = PhosphorIconsBold.arrowClockwise;
   static const IconData close = PhosphorIconsBold.x;
   static const IconData home = PhosphorIconsBold.house;
+  static const IconData devices = PhosphorIconsBold.devices;
 }
