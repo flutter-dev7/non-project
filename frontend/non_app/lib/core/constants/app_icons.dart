@@ -26,4 +26,15 @@ class AppIcons {
   static const IconData close = PhosphorIconsBold.x;
   static const IconData home = PhosphorIconsBold.house;
   static const IconData devices = PhosphorIconsBold.devices;
+  static const IconData plus = PhosphorIconsBold.plus;
+  static const IconData minus = PhosphorIconsBold.minus;
+  static const IconData calendar = PhosphorIconsBold.calendarBlank;
+  static const IconData trash = PhosphorIconsBold.trash;
+  static const IconData cart = PhosphorIconsBold.shoppingCart;
+  static const IconData edit = PhosphorIconsBold.pencilSimple;
+  static const IconData wallet = PhosphorIconsBold.wallet;
+  static const IconData truck = PhosphorIconsBold.truck;
+  static const IconData note = PhosphorIconsBold.note;
+  static const IconData location = PhosphorIconsBold.mapPin;
+  static const IconData receipt = PhosphorIconsBold.receipt;
 }

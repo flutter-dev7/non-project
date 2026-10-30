@@ -28,30 +28,43 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   );
 });
 
-final loginUseCaseProvider =
-    Provider((ref) => LoginUseCase(ref.watch(authRepositoryProvider)));
-final registerUseCaseProvider =
-    Provider((ref) => RegisterUseCase(ref.watch(authRepositoryProvider)));
-final verifyEmailUseCaseProvider =
-    Provider((ref) => VerifyEmailUseCase(ref.watch(authRepositoryProvider)));
-final resendVerificationUseCaseProvider =
-    Provider((ref) => ResendVerificationUseCase(ref.watch(authRepositoryProvider)));
-final forgotPasswordUseCaseProvider =
-    Provider((ref) => ForgotPasswordUseCase(ref.watch(authRepositoryProvider)));
-final verifyResetCodeUseCaseProvider =
-    Provider((ref) => VerifyResetCodeUseCase(ref.watch(authRepositoryProvider)));
-final resetPasswordUseCaseProvider =
-    Provider((ref) => ResetPasswordUseCase(ref.watch(authRepositoryProvider)));
-final changePasswordUseCaseProvider =
-    Provider((ref) => ChangePasswordUseCase(ref.watch(authRepositoryProvider)));
-final restoreSessionUseCaseProvider =
-    Provider((ref) => RestoreSessionUseCase(ref.watch(authRepositoryProvider)));
-final logoutUseCaseProvider =
-    Provider((ref) => LogoutUseCase(ref.watch(authRepositoryProvider)));
-final logoutAllUseCaseProvider =
-    Provider((ref) => LogoutAllUseCase(ref.watch(authRepositoryProvider)));
+final loginUseCaseProvider = Provider(
+  (ref) => LoginUseCase(ref.watch(authRepositoryProvider)),
+);
+final registerUseCaseProvider = Provider(
+  (ref) => RegisterUseCase(ref.watch(authRepositoryProvider)),
+);
+final verifyEmailUseCaseProvider = Provider(
+  (ref) => VerifyEmailUseCase(ref.watch(authRepositoryProvider)),
+);
+final resendVerificationUseCaseProvider = Provider(
+  (ref) => ResendVerificationUseCase(ref.watch(authRepositoryProvider)),
+);
+final forgotPasswordUseCaseProvider = Provider(
+  (ref) => ForgotPasswordUseCase(ref.watch(authRepositoryProvider)),
+);
+final verifyResetCodeUseCaseProvider = Provider(
+  (ref) => VerifyResetCodeUseCase(ref.watch(authRepositoryProvider)),
+);
+final resetPasswordUseCaseProvider = Provider(
+  (ref) => ResetPasswordUseCase(ref.watch(authRepositoryProvider)),
+);
+final changePasswordUseCaseProvider = Provider(
+  (ref) => ChangePasswordUseCase(ref.watch(authRepositoryProvider)),
+);
+final restoreSessionUseCaseProvider = Provider(
+  (ref) => RestoreSessionUseCase(ref.watch(authRepositoryProvider)),
+);
+final logoutUseCaseProvider = Provider(
+  (ref) => LogoutUseCase(ref.watch(authRepositoryProvider)),
+);
+final logoutAllUseCaseProvider = Provider(
+  (ref) => LogoutAllUseCase(ref.watch(authRepositoryProvider)),
+);
 
-final authProvider = AsyncNotifierProvider<AuthNotifier, AuthUser?>(AuthNotifier.new);
+final authProvider = AsyncNotifierProvider<AuthNotifier, AuthUser?>(
+  AuthNotifier.new,
+);
 
 class AuthNotifier extends AsyncNotifier<AuthUser?> {
   @override
@@ -67,12 +80,18 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
   }
 
   Future<void> login(String email, String password) async {
-    final user = await ref.read(loginUseCaseProvider)(email: email, password: password);
+    final user = await ref.read(loginUseCaseProvider)(
+      email: email,
+      password: password,
+    );
     state = AsyncData<AuthUser?>(user);
   }
 
   Future<void> verifyEmail(String email, String code) async {
-    final user = await ref.read(verifyEmailUseCaseProvider)(email: email, code: code);
+    final user = await ref.read(verifyEmailUseCaseProvider)(
+      email: email,
+      code: code,
+    );
     state = AsyncData<AuthUser?>(user);
   }
 
@@ -97,3 +116,7 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     state = const AsyncData<AuthUser?>(null);
   }
 }
+
+final currentUserIdProvider = Provider<String?>((ref) {
+  return ref.watch(authProvider.select((state) => state.valueOrNull?.id));
+});

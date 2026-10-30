@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:non_app/features/orders/domain/entities/order.dart';
+import 'package:non_app/features/orders/presentation/pages/order_details_page.dart';
+import 'package:non_app/features/orders/presentation/pages/order_form_page.dart';
+import 'package:non_app/features/shops/presentation/pages/balance_page.dart';
 
 import '../../features/auth/domain/entities/auth_user.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
@@ -74,19 +78,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.resetCode,
-        redirect: (context, state) =>
-            state.uri.queryParameters['email'] == null ? AppRoutes.forgotPassword : null,
-        builder: (context, state) => ResetCodePage(
-          email: state.uri.queryParameters['email']!,
-        ),
+        redirect: (context, state) => state.uri.queryParameters['email'] == null
+            ? AppRoutes.forgotPassword
+            : null,
+        builder: (context, state) =>
+            ResetCodePage(email: state.uri.queryParameters['email']!),
       ),
       GoRoute(
         path: AppRoutes.resetPassword,
         redirect: (context, state) =>
             state.extra is String ? null : AppRoutes.forgotPassword,
-        builder: (context, state) => ResetPasswordPage(
-          resetToken: state.extra as String,
-        ),
+        builder: (context, state) =>
+            ResetPasswordPage(resetToken: state.extra as String),
       ),
       GoRoute(
         path: AppRoutes.home,
@@ -95,6 +98,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.changePassword,
         builder: (context, state) => const ChangePasswordPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.orderDetails,
+        builder: (context, state) =>
+            OrderDetailsPage(orderId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: AppRoutes.orderForm,
+        builder: (context, state) =>
+            OrderFormPage(order: state.extra as Order?),
+      ),
+      GoRoute(
+        path: AppRoutes.balance,
+        builder: (context, state) => const BalancePage(),
       ),
     ],
   );

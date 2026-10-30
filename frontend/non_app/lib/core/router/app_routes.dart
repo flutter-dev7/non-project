@@ -10,6 +10,11 @@ class AppRoutes {
   static const String resetPassword = '/reset-password';
   static const String home = '/home';
   static const String changePassword = '/change-password';
+  static const String orderDetails = '/orders/:id';
+  static const String orderForm = '/order-form';
+  static const String balance = '/balance';
+
+  static String orderDetailsFor(String id) => '/orders/$id';
 
   static const Set<String> publicRoutes = {
     login,
@@ -21,12 +26,10 @@ class AppRoutes {
   };
 
   static String verifyEmailFor(String email, {bool send = false}) => Uri(
-        path: verifyEmail,
-        queryParameters: {'email': email, if (send) 'send': '1'},
-      ).toString();
+    path: verifyEmail,
+    queryParameters: {'email': email, if (send) 'send': '1'},
+  ).toString();
 
-  static String resetCodeFor(String email) => Uri(
-        path: resetCode,
-        queryParameters: {'email': email},
-      ).toString();
+  static String resetCodeFor(String email) =>
+      Uri(path: resetCode, queryParameters: {'email': email}).toString();
 }

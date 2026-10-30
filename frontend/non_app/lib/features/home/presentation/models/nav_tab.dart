@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:non_app/features/orders/presentation/pages/catalog_page.dart';
+import 'package:non_app/features/orders/presentation/pages/orders_page.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../../core/widgets/empty_state.dart';
@@ -51,21 +53,13 @@ List<NavTab> tabsFor(UserRole role) {
           label: 'Заказать',
           icon: PhosphorIconsRegular.shoppingCart,
           selectedIcon: PhosphorIconsFill.shoppingCart,
-          page: _Soon(
-            title: 'Заказать',
-            icon: PhosphorIconsBold.shoppingCart,
-            message: 'Здесь вы будете выбирать хлеб и оформлять заказ',
-          ),
+          page: CatalogPage(),
         ),
         NavTab(
           label: 'Заказы',
           icon: PhosphorIconsRegular.clipboardText,
           selectedIcon: PhosphorIconsFill.clipboardText,
-          page: _Soon(
-            title: 'Мои заказы',
-            icon: PhosphorIconsBold.clipboardText,
-            message: 'Здесь будут ваши заказы, статусы и долг',
-          ),
+          page: OrdersPage(),
         ),
         _profileTab,
       ];
