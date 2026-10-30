@@ -29,10 +29,14 @@ class OrderDraft {
     required this.paymentType,
     required this.note,
     required this.lines,
+    this.shopId,
   });
 
   final DateTime deliveryDate;
   final PaymentType paymentType;
   final String? note;
   final List<OrderLine> lines;
+
+  /// Заполняется, когда заказ оформляет агент за магазин.
+  final String? shopId;
 }

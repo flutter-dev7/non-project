@@ -59,13 +59,18 @@ class OrderDetailsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final order = ref.watch(orderDetailsProvider(orderId));
-    final role = ref.watch(authProvider.select((state) => state.valueOrNull?.role));
+    final role = ref.watch(
+      authProvider.select((state) => state.valueOrNull?.role),
+    );
     final isShop = role == UserRole.shop;
     final isCourier = role == UserRole.courier;
+    final isAgent = role == UserRole.agent;
 
     return Scaffold(
       appBar: AppTopBar(
-        title: order.valueOrNull == null ? 'Заказ' : 'Заказ №${order.value!.number}',
+        title: order.valueOrNull == null
+            ? 'Заказ'
+            : 'Заказ №${order.value!.number}',
       ),
       body: order.when(
         loading: () => const LoadingView(),
@@ -93,11 +98,13 @@ class OrderDetailsPage extends ConsumerWidget {
               const SizedBox(height: 20),
               CourierActionButton(order: data),
             ],
-            if (isShop && (data.canEdit || data.canCancel)) ...[
+            if ((isShop || (isAgent && data.source == 'Agent')) &&
+                (data.canEdit || data.canCancel)) ...[
               const SizedBox(height: 20),
               if (data.canEdit)
                 OutlinedButton.icon(
-                  onPressed: () => context.push(AppRoutes.orderForm, extra: data),
+                  onPressed: () =>
+                      context.push(AppRoutes.orderForm, extra: data),
                   icon: const Icon(AppIcons.edit, size: 20),
                   label: const Text('Изменить заказ'),
                 ),
@@ -187,7 +194,11 @@ class _InfoCard extends StatelessWidget {
     return Card(
       child: Column(
         children: [
-          _InfoRow(icon: AppIcons.wallet, label: 'Оплата', value: order.paymentType.label),
+          _InfoRow(
+            icon: AppIcons.wallet,
+            label: 'Оплата',
+            value: order.paymentType.label,
+          ),
           const Divider(indent: 56),
           _InfoRow(
             icon: AppIcons.truck,
@@ -202,7 +213,11 @@ class _InfoCard extends StatelessWidget {
           ),
           if (order.note != null && order.note!.isNotEmpty) ...[
             const Divider(indent: 56),
-            _InfoRow(icon: AppIcons.note, label: 'Комментарий', value: order.note!),
+            _InfoRow(
+              icon: AppIcons.note,
+              label: 'Комментарий',
+              value: order.note!,
+            ),
           ],
         ],
       ),
@@ -211,7 +226,11 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -232,7 +251,11 @@ class _InfoRow extends StatelessWidget {
       ),
       subtitle: Text(
         value,
-        style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: AppColors.brown),
+        style: const TextStyle(
+          fontSize: 15.5,
+          fontWeight: FontWeight.w700,
+          color: AppColors.brown,
+        ),
       ),
     );
   }
@@ -251,7 +274,10 @@ class _ItemsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Состав заказа', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            const Text(
+              'Состав заказа',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
             const SizedBox(height: 12),
             for (final item in order.items)
               Padding(
@@ -262,10 +288,16 @@ class _ItemsCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text(
+                            item.productName,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           Text(
                             '${item.quantity} × ${Formatters.money(item.unitPrice)}',
-                            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -280,11 +312,17 @@ class _ItemsCard extends StatelessWidget {
             const Divider(height: 24),
             Row(
               children: [
-                const Text('Итого', style: TextStyle(fontWeight: FontWeight.w800)),
+                const Text(
+                  'Итого',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
                 const Spacer(),
                 Text(
                   Formatters.money(order.totalAmount),
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                  ),
                 ),
               ],
             ),
@@ -308,7 +346,10 @@ class _HistoryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('История', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            const Text(
+              'История',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
             const SizedBox(height: 12),
             for (final entry in order.history)
               Padding(
@@ -335,14 +376,20 @@ class _HistoryCard extends StatelessWidget {
                           if (entry.changedByName != null)
                             Text(
                               entry.changedByName!,
-                              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 13,
+                              ),
                             ),
                         ],
                       ),
                     ),
                     Text(
                       Formatters.dateTime(entry.changedAt),
-                      style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -372,12 +419,18 @@ class _ShopCard extends StatelessWidget {
                 children: [
                   Text(
                     order.shopName,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     order.shopAddress,
-                    style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(

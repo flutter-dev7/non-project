@@ -9,9 +9,10 @@ import '../../domain/entities/order.dart';
 import 'status_badge.dart';
 
 class OrderCard extends StatelessWidget {
-  const OrderCard({super.key, required this.order});
+  const OrderCard({super.key, required this.order, this.showShop = false});
 
   final Order order;
+  final bool showShop;
 
   String get _summary {
     final names = order.items.map((i) => '${i.productName} ×${i.quantity}').toList();
@@ -32,6 +33,13 @@ class OrderCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (showShop) ...[
+                Text(
+                  order.shopName,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                ),
+                const SizedBox(height: 8),
+              ],
               Row(
                 children: [
                   const Icon(AppIcons.calendar, size: 18, color: AppColors.muted),
@@ -39,7 +47,10 @@ class OrderCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       Formatters.date(order.deliveryDate),
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: showShop ? FontWeight.w600 : FontWeight.w800,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                   StatusBadge(status: order.status),

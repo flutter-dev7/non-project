@@ -44,28 +44,32 @@ class _CatalogView extends ConsumerWidget {
           message: errorText(error),
           onRetry: () => ref.invalidate(productsProvider),
         ),
-        data: (list) {
-          if (list.isEmpty) {
-            return const EmptyState(
-              icon: AppIcons.store,
-              title: 'Пока нет товаров',
-              message: 'Каталог пуст. Загляните позже.',
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(productsProvider);
-              await ref.read(productsProvider.future);
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => _ProductTile(product: list[index]),
-            ),
-          );
-        },
+        data: (list) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(productsProvider);
+            await ref.read(productsProvider.future);
+          },
+          child: list.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 80),
+                    EmptyState(
+                      icon: AppIcons.store,
+                      title: 'Пока нет товаров',
+                      message: 'Потяните вниз, чтобы обновить.',
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                  itemCount: list.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) =>
+                      _ProductTile(product: list[index]),
+                ),
+        ),
       ),
       bottomNavigationBar: cart.isEmpty ? null : _CartBar(cart: cart),
     );
@@ -79,10 +83,14 @@ class _ProductTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final quantity = ref.watch(cartProvider.select((c) => c[product.id]?.quantity ?? 0));
+    final quantity = ref.watch(
+      cartProvider.select((c) => c[product.id]?.quantity ?? 0),
+    );
 
     void change(int value) {
-      ref.read(cartProvider.notifier).setLine(
+      ref
+          .read(cartProvider.notifier)
+          .setLine(
             OrderLine(
               productId: product.id,
               name: product.name,
@@ -107,7 +115,10 @@ class _ProductTile extends ConsumerWidget {
                     children: [
                       Text(
                         product.name,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
                       ),
                       if (product.weightInGrams != null) ...[
                         const SizedBox(height: 4),
@@ -129,7 +140,10 @@ class _ProductTile extends ConsumerWidget {
               children: [
                 Text(
                   Formatters.money(product.price),
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 17,
+                  ),
                 ),
                 const Spacer(),
                 if (quantity == 0)
@@ -142,7 +156,11 @@ class _ProductTile extends ConsumerWidget {
                       child: const SizedBox(
                         width: 112,
                         height: 36,
-                        child: Icon(AppIcons.plus, size: 18, color: Colors.white),
+                        child: Icon(
+                          AppIcons.plus,
+                          size: 18,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   )
@@ -171,7 +189,11 @@ class _ProductImage extends StatelessWidget {
         color: AppDecor.fieldFill,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Icon(Icons.bakery_dining_outlined, color: AppDecor.heroMid, size: 30),
+      child: const Icon(
+        Icons.bakery_dining_outlined,
+        color: AppDecor.heroMid,
+        size: 30,
+      ),
     );
 
     if (url == null || url!.isEmpty) return placeholder;
@@ -213,7 +235,10 @@ class _CartBar extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   '${cart.totalQuantity} шт.',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const Spacer(),
                 Text(

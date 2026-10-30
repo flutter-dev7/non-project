@@ -33,7 +33,12 @@ class OrdersRemoteDataSource {
 
     final data = await _client.get(path);
 
-    return PagedResult.fromJson(data, OrderModel.fromJson, page: page, pageSize: pageSize);
+    return PagedResult.fromJson(
+      data,
+      OrderModel.fromJson,
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   Future<OrderModel> getOrder(String id) async {
@@ -43,17 +48,24 @@ class OrdersRemoteDataSource {
   }
 
   Map<String, dynamic> _body(OrderDraft draft) => {
-        'deliveryDate': Formatters.apiDate(draft.deliveryDate),
-        'paymentType': draft.paymentType.apiName,
-        if (draft.note != null) 'note': draft.note,
-        'items': [
-          for (final line in draft.lines)
-            {'productId': line.productId, 'quantity': line.quantity},
-        ],
-      };
+    'deliveryDate': Formatters.apiDate(draft.deliveryDate),
+    'paymentType': draft.paymentType.apiName,
+    if (draft.note != null) 'note': draft.note,
+    'items': [
+      for (final line in draft.lines)
+        {'productId': line.productId, 'quantity': line.quantity},
+    ],
+  };
 
   Future<void> createOrder(String id, OrderDraft draft) async {
-    await _client.post('/api/Orders', data: {'id': id, ..._body(draft)});
+    await _client.post(
+      '/api/Orders',
+      data: {
+        'id': id,
+        if (draft.shopId != null) 'shopId': draft.shopId,
+        ..._body(draft),
+      },
+    );
   }
 
   Future<void> updateOrder(String id, OrderDraft draft) async {

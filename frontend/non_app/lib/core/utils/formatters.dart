@@ -27,17 +27,23 @@ class Formatters {
 
   /// Сервер отдаёт UTC; показываем время Таджикистана (UTC+5).
   static DateTime parseDateTime(String value) {
-    final hasZone = value.endsWith('Z') || RegExp(r'[+-]\d\d:\d\d$').hasMatch(value);
+    final hasZone =
+        value.endsWith('Z') || RegExp(r'[+-]\d\d:\d\d$').hasMatch(value);
     final parsed = DateTime.parse(hasZone ? value : '${value}Z');
 
     return parsed.toUtc().add(const Duration(hours: 5));
   }
 
-  static DateTime nowTj() => DateTime.now().toUtc().add(const Duration(hours: 5));
+  static DateTime nowTj() =>
+      DateTime.now().toUtc().add(const Duration(hours: 5));
 
   static DateTime today() {
     final now = nowTj();
 
     return DateTime(now.year, now.month, now.day);
   }
+
+  static final DateFormat _time = DateFormat('HH:mm');
+
+  static String time(DateTime value) => _time.format(value);
 }

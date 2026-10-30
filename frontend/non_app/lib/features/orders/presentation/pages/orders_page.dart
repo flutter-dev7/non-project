@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:non_app/features/orders/presentation/widgets/order_status_filter.dart';
 
 import '../../../../core/constants/app_icons.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_decor.dart';
 import '../../../../core/utils/error_text.dart';
 import '../../../../core/utils/formatters.dart';
@@ -14,7 +14,6 @@ import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../../shops/presentation/providers/shops_providers.dart';
 import '../../../shops/presentation/widgets/shop_gate.dart';
-import '../../domain/entities/order_status.dart';
 import '../providers/orders_providers.dart';
 import '../widgets/order_card.dart';
 
@@ -121,7 +120,6 @@ class _Header extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final balance = ref.watch(myBalanceProvider).valueOrNull;
-    final filter = ref.watch(orderFilterProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,48 +168,9 @@ class _Header extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _FilterChip(label: 'Все', selected: filter == null, status: null),
-              for (final status in OrderStatus.values)
-                _FilterChip(label: status.label, selected: filter == status, status: status),
-            ],
-          ),
-        ),
+        const OrderStatusFilter(),
         const SizedBox(height: 16),
       ],
-    );
-  }
-}
-
-class _FilterChip extends ConsumerWidget {
-  const _FilterChip({required this.label, required this.selected, required this.status});
-
-  final String label;
-  final bool selected;
-  final OrderStatus? status;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        showCheckmark: false,
-        selectedColor: AppDecor.heroMid,
-        backgroundColor: Colors.white,
-        side: BorderSide(color: selected ? AppDecor.heroMid : AppColors.border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        labelStyle: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: selected ? Colors.white : AppColors.brown,
-        ),
-        onSelected: (_) => ref.read(orderFilterProvider.notifier).select(status),
-      ),
     );
   }
 }

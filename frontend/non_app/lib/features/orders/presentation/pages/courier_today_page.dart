@@ -73,22 +73,50 @@ class _Summary extends StatelessWidget {
     final done = orders.where((o) => o.status == OrderStatus.delivered).length;
 
     final toCollect = orders
-        .where((o) => o.paymentType == PaymentType.now && o.status != OrderStatus.delivered)
+        .where(
+          (o) =>
+              o.paymentType == PaymentType.now &&
+              o.status != OrderStatus.delivered,
+        )
         .fold(0.0, (sum, o) => sum + o.totalAmount);
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
       decoration: BoxDecoration(
         gradient: AppDecor.heroGradient,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
-          Expanded(child: _Stat(label: 'Всего', value: '${orders.length}')),
-          Expanded(child: _Stat(label: 'Доставлено', value: '$done')),
-          Expanded(flex: 2, child: _Stat(label: 'Получить', value: Formatters.money(toCollect))),
+          Expanded(
+            flex: 2,
+            child: _Stat(label: 'Всего', value: '${orders.length}'),
+          ),
+          const _StatDivider(),
+          Expanded(
+            flex: 2,
+            child: _Stat(label: 'Доставлено', value: '$done'),
+          ),
+          const _StatDivider(),
+          Expanded(
+            flex: 3,
+            child: _Stat(label: 'Получить', value: Formatters.money(toCollect)),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 40,
+      color: Colors.white.withValues(alpha: 0.22),
     );
   }
 }
@@ -101,20 +129,35 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 19,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 13,
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

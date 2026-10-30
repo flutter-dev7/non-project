@@ -13,6 +13,8 @@ class AppRoutes {
   static const String orderDetails = '/orders/:id';
   static const String orderForm = '/order-form';
   static const String balance = '/balance';
+  static const String shopDetails = '/shop-details';
+  static const String shopForm = '/shop-form';
 
   static String orderDetailsFor(String id) => '/orders/$id';
 

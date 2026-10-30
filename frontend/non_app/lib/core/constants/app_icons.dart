@@ -37,4 +37,5 @@ class AppIcons {
   static const IconData note = PhosphorIconsBold.note;
   static const IconData location = PhosphorIconsBold.mapPin;
   static const IconData receipt = PhosphorIconsBold.receipt;
+  static const IconData search = PhosphorIconsBold.magnifyingGlass;
 }

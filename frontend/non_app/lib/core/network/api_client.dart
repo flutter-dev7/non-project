@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 import '../constants/api_constants.dart';
 import '../storage/token_storage.dart';
@@ -14,15 +15,12 @@ class ApiClient {
     required TokenStorage tokenStorage,
     required SessionEvents sessionEvents,
     String? baseUrl,
-  })  : _tokenStorage = tokenStorage,
-        _sessionEvents = sessionEvents,
-        dio = Dio(_options(baseUrl)),
-        _refreshDio = Dio(_options(baseUrl)) {
+  }) : _tokenStorage = tokenStorage,
+       _sessionEvents = sessionEvents,
+       dio = Dio(_options(baseUrl)),
+       _refreshDio = Dio(_options(baseUrl)) {
     dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: _onRequest,
-        onError: _onError,
-      ),
+      InterceptorsWrapper(onRequest: _onRequest, onError: _onError),
     );
   }
 
@@ -34,14 +32,17 @@ class ApiClient {
   Future<_RefreshOutcome>? _refreshing;
 
   static BaseOptions _options(String? baseUrl) => BaseOptions(
-        baseUrl: baseUrl ?? ApiConstants.baseUrl,
-        connectTimeout: ApiConstants.connectTimeout,
-        receiveTimeout: ApiConstants.receiveTimeout,
-        headers: const {'Accept': 'application/json'},
-      );
+    baseUrl: baseUrl ?? ApiConstants.baseUrl,
+    connectTimeout: ApiConstants.connectTimeout,
+    receiveTimeout: ApiConstants.receiveTimeout,
+    headers: const {'Accept': 'application/json'},
+  );
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? query, bool auth = true}) =>
-      _request('GET', path, query: query, auth: auth);
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) => _request('GET', path, query: query, auth: auth);
 
   Future<dynamic> post(String path, {Object? data, bool auth = true}) =>
       _request('POST', path, data: data, auth: auth);
@@ -59,16 +60,33 @@ class ApiClient {
     Map<String, dynamic>? query,
     bool auth = true,
   }) async {
-    try {
-      final response = await dio.request<dynamic>(
+    Future<Response<dynamic>> send() {
+      return dio.request<dynamic>(
         path,
         data: data,
         queryParameters: query,
         options: Options(method: method, extra: {'skipAuth': !auth}),
       );
+    }
+
+    try {
+      Response<dynamic> response;
+
+      try {
+        response = await send();
+      } on DioException catch (e) {
+        final isConnectionProblem =
+            e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.connectionError;
+
+        if (method != 'GET' || !isConnectionProblem) rethrow;
+
+        response = await send();
+      }
 
       return _unwrap(response);
     } on DioException catch (e) {
+      debugPrint('API ERROR ${e.type} ${e.message} $path');
       throw ApiException.fromDio(e);
     }
   }
@@ -91,7 +109,10 @@ class ApiClient {
     return body;
   }
 
-  Future<void> _onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> _onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     if (options.extra['skipAuth'] != true) {
       final token = await _tokenStorage.readAccessToken();
 
@@ -103,10 +124,14 @@ class ApiClient {
     handler.next(options);
   }
 
-  Future<void> _onError(DioException error, ErrorInterceptorHandler handler) async {
+  Future<void> _onError(
+    DioException error,
+    ErrorInterceptorHandler handler,
+  ) async {
     final options = error.requestOptions;
 
-    final shouldTryRefresh = error.response?.statusCode == 401 &&
+    final shouldTryRefresh =
+        error.response?.statusCode == 401 &&
         options.extra['skipAuth'] != true &&
         options.extra['retried'] != true;
 

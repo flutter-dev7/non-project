@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:non_app/features/orders/domain/entities/order.dart';
 import 'package:non_app/features/orders/presentation/pages/order_details_page.dart';
 import 'package:non_app/features/orders/presentation/pages/order_form_page.dart';
+import 'package:non_app/features/shops/domain/entities/shop.dart';
+import 'package:non_app/features/shops/presentation/pages/add_shop_page.dart';
 import 'package:non_app/features/shops/presentation/pages/balance_page.dart';
+import 'package:non_app/features/shops/presentation/pages/shop_details_page.dart';
 
 import '../../features/auth/domain/entities/auth_user.dart';
 import '../../features/auth/presentation/pages/change_password_page.dart';
@@ -105,13 +108,29 @@ final routerProvider = Provider<GoRouter>((ref) {
             OrderDetailsPage(orderId: state.pathParameters['id']!),
       ),
       GoRoute(
-        path: AppRoutes.orderForm,
-        builder: (context, state) =>
-            OrderFormPage(order: state.extra as Order?),
-      ),
-      GoRoute(
         path: AppRoutes.balance,
         builder: (context, state) => const BalancePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.orderForm,
+        builder: (context, state) {
+          final extra = state.extra;
+
+          return OrderFormPage(
+            order: extra is Order ? extra : null,
+            shop: extra is Shop ? extra : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.shopDetails,
+        redirect: (context, state) =>
+            state.extra is Shop ? null : AppRoutes.home,
+        builder: (context, state) => ShopDetailsPage(shop: state.extra as Shop),
+      ),
+      GoRoute(
+        path: AppRoutes.shopForm,
+        builder: (context, state) => const AddShopPage(),
       ),
     ],
   );

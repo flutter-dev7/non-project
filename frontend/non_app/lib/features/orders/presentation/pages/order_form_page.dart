@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:non_app/features/shops/domain/entities/shop.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/app_icons.dart';
@@ -26,10 +27,13 @@ import '../providers/orders_providers.dart';
 import '../utils/delivery_rules.dart';
 
 class OrderFormPage extends ConsumerStatefulWidget {
-  const OrderFormPage({super.key, this.order});
+  const OrderFormPage({super.key, this.order, this.shop});
 
   /// null — новый заказ, иначе изменение существующего.
   final Order? order;
+
+  /// Магазин, за который заказ оформляет агент. Для магазина — null.
+  final Shop? shop;
 
   @override
   ConsumerState<OrderFormPage> createState() => _OrderFormPageState();
@@ -67,7 +71,7 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
       _payment = order.paymentType;
       _note.text = order.note ?? '';
     } else {
-      _lines = Map.of(ref.read(cartProvider));
+      _lines = widget.shop == null ? Map.of(ref.read(cartProvider)) : {};
     }
   }
 
@@ -79,7 +83,7 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
 
   void _setLine(OrderLine line) {
     setState(() {
-      if (line.quantity <= 0) {
+      if (!_isEdit && widget.shop == null) {
         _lines.remove(line.productId);
       } else {
         _lines[line.productId] = line;
@@ -148,6 +152,7 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
         paymentType: _payment,
         note: note.isEmpty ? null : note,
         lines: _lines.values.toList(),
+        shopId: widget.shop?.id,
       );
 
       if (_isEdit) {
@@ -155,7 +160,10 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
         ref.invalidate(orderDetailsProvider(widget.order!.id));
       } else {
         await ref.read(createOrderUseCaseProvider)(_orderId, draft);
-        ref.read(cartProvider.notifier).clear();
+
+        if (widget.shop == null) {
+          ref.read(cartProvider.notifier).clear();
+        }
       }
 
       ref.invalidate(ordersProvider);
@@ -180,10 +188,16 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
     final date = _picked ?? minDate;
 
     return Scaffold(
-      appBar: AppTopBar(title: _isEdit ? 'Изменить заказ' : 'Оформление заказа'),
+      appBar: AppTopBar(
+        title: _isEdit ? 'Изменить заказ' : 'Оформление заказа',
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         children: [
+          if (widget.shop != null) ...[
+            _ShopBanner(shop: widget.shop!),
+            const SizedBox(height: 20),
+          ],
           _sectionTitle('Товары'),
           if (_lines.isEmpty)
             const Card(
@@ -191,7 +205,10 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
                 padding: EdgeInsets.all(20),
                 child: Text(
                   'Корзина пуста',
-                  style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             )
@@ -222,7 +239,10 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
                     const SizedBox(width: 12),
                     Text(
                       Formatters.date(date),
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
@@ -254,8 +274,9 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
                   ButtonSegment(value: type, label: Text(type.label)),
               ],
               selected: {_payment},
-              onSelectionChanged:
-                  loading ? null : (value) => setState(() => _payment = value.first),
+              onSelectionChanged: loading
+                  ? null
+                  : (value) => setState(() => _payment = value.first),
             ),
           ),
           const SizedBox(height: 24),
@@ -279,11 +300,17 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
           const SizedBox(height: 24),
           Row(
             children: [
-              const Text('Итого', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              const Text(
+                'Итого',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
               const Spacer(),
               Text(
                 Formatters.money(_total),
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                ),
               ),
             ],
           ),
@@ -301,7 +328,10 @@ class _OrderFormPageState extends ConsumerState<OrderFormPage>
   Widget _sectionTitle(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+      child: Text(
+        text,
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+      ),
     );
   }
 }
@@ -325,14 +355,21 @@ class _LineTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     line.name,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 InkWell(
                   onTap: () => onChanged(line.withQuantity(0)),
                   child: const Padding(
                     padding: EdgeInsets.all(4),
-                    child: Icon(AppIcons.trash, size: 20, color: AppColors.muted),
+                    child: Icon(
+                      AppIcons.trash,
+                      size: 20,
+                      color: AppColors.muted,
+                    ),
                   ),
                 ),
               ],
@@ -342,7 +379,10 @@ class _LineTile extends StatelessWidget {
               children: [
                 Text(
                   Formatters.money(line.unitPrice),
-                  style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 QuantityStepper(
@@ -376,7 +416,9 @@ class _ProductPicker extends ConsumerWidget {
 
     return SafeArea(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         child: products.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(32),
@@ -396,7 +438,10 @@ class _ProductPicker extends ConsumerWidget {
 
               return ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                title: Text(
+                  product.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 subtitle: Text(Formatters.money(product.price)),
                 trailing: const Icon(AppIcons.plus, color: AppDecor.heroMid),
                 onTap: () => Navigator.of(context).pop(product),
@@ -404,6 +449,53 @@ class _ProductPicker extends ConsumerWidget {
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+class _ShopBanner extends StatelessWidget {
+  const _ShopBanner({required this.shop});
+
+  final Shop shop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppDecor.heroGradient,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          const Icon(AppIcons.store, color: Colors.white, size: 28),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Заказ для магазина',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  shop.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:non_app/features/orders/presentation/pages/agent_orders_page.dart';
 import 'package:non_app/features/orders/presentation/pages/catalog_page.dart';
 import 'package:non_app/features/orders/presentation/pages/courier_history_page.dart';
 import 'package:non_app/features/orders/presentation/pages/courier_today_page.dart';
 import 'package:non_app/features/orders/presentation/pages/orders_page.dart';
+import 'package:non_app/features/shops/presentation/pages/agent_shops_page.dart';
+import 'package:non_app/features/visits/presentation/pages/visits_page.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../../core/widgets/empty_state.dart';
@@ -89,31 +92,19 @@ List<NavTab> tabsFor(UserRole role) {
           label: 'Магазины',
           icon: PhosphorIconsRegular.storefront,
           selectedIcon: PhosphorIconsFill.storefront,
-          page: _Soon(
-            title: 'Магазины',
-            icon: PhosphorIconsBold.storefront,
-            message: 'Здесь будут магазины и визиты',
-          ),
+          page: AgentShopsPage(),
         ),
         NavTab(
           label: 'Заказы',
           icon: PhosphorIconsRegular.clipboardText,
           selectedIcon: PhosphorIconsFill.clipboardText,
-          page: _Soon(
-            title: 'Заказы',
-            icon: PhosphorIconsBold.clipboardText,
-            message: 'Здесь вы будете записывать заказы магазинов',
-          ),
+          page: AgentOrdersPage(),
         ),
         NavTab(
-          label: 'Оплаты',
-          icon: PhosphorIconsRegular.wallet,
-          selectedIcon: PhosphorIconsFill.wallet,
-          page: _Soon(
-            title: 'Оплаты',
-            icon: PhosphorIconsBold.wallet,
-            message: 'Здесь вы будете записывать оплаты и смотреть долги',
-          ),
+          label: 'Визиты',
+          icon: PhosphorIconsRegular.mapPin,
+          selectedIcon: PhosphorIconsFill.mapPin,
+          page: VisitsPage(),
         ),
         _profileTab,
       ];

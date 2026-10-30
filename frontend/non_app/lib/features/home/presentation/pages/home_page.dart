@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:non_app/core/widgets/lazy_indexed_stack.dart';
 import 'package:non_app/features/home/presentation/models/nav_tab.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -30,7 +31,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         if (!didPop) setState(() => _index = 0);
       },
       child: Scaffold(
-        body: IndexedStack(
+        body: LazyIndexedStack(
           index: index,
           children: [for (final tab in tabs) tab.page],
         ),
