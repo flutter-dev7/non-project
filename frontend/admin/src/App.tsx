@@ -9,6 +9,8 @@ import { NewOrderPage } from './features/orders/new-order-page'
 import { PlanPage } from './features/products/plan-page'
 import { ShopsPage } from './features/shops/shops-page'
 import { SettingsPage } from './features/settings/settings-page'
+import { ProductsPage } from './features/products/products-page'
+import { UsersPage } from './features/users/users-page'
 
 export default function App() {
   return (
@@ -23,8 +25,8 @@ export default function App() {
             <Route path="orders/new" element={<NewOrderPage />} />
             <Route path="plan" element={<PlanPage />} />
             <Route path="shops" element={<ShopsPage />} />
-            <Route path="products" element={<PlaceholderPage title="Товары" />} />
-            <Route path="users" element={<PlaceholderPage title="Пользователи" />} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="users" element={<UsersPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Route>

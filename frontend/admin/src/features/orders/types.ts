@@ -39,8 +39,9 @@ export type OrderDetails = Order & { history: OrderHistoryEntry[] }
 
 export type Courier = {
   id: string
-  firstName: string
-  lastName: string
+  firstName?: string
+  lastName?: string
+  fullName?: string
   phone: string
 }
 
