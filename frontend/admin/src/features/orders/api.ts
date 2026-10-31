@@ -7,6 +7,7 @@ import type {
   OrderDetails,
   OrderStatus,
   PaymentMethod,
+  PaymentType,
 } from './types'
 
 export type OrdersFilter = {
@@ -56,4 +57,17 @@ export function fetchCouriers() {
     url: '/api/Users',
     params: { Role: 'Courier', IsActive: true, Page: 1, PageSize: 100 },
   })
+}
+
+export type NewOrderInput = {
+  id: string
+  shopId: string
+  deliveryDate: string
+  paymentType: PaymentType
+  note?: string
+  items: { productId: string; quantity: number }[]
+}
+
+export function createOrder(input: NewOrderInput) {
+  return request<unknown>({ method: 'POST', url: '/api/Orders', data: input })
 }
