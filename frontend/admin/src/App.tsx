@@ -8,6 +8,7 @@ import { OrdersPage } from '@/features/orders/orders-page'
 import { NewOrderPage } from './features/orders/new-order-page'
 import { PlanPage } from './features/products/plan-page'
 import { ShopsPage } from './features/shops/shops-page'
+import { SettingsPage } from './features/settings/settings-page'
 
 export default function App() {
   return (
@@ -24,7 +25,7 @@ export default function App() {
             <Route path="shops" element={<ShopsPage />} />
             <Route path="products" element={<PlaceholderPage title="Товары" />} />
             <Route path="users" element={<PlaceholderPage title="Пользователи" />} />
-            <Route path="settings" element={<PlaceholderPage title="Настройки" />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Route>
 

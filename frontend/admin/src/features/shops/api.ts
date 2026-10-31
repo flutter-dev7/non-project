@@ -96,3 +96,9 @@ export function setShopOwner(id: string, ownerPhone: string) {
     data: { ownerPhone },
   })
 }
+
+export type UpdateShopInput = NewShopInput & { isActive: boolean }
+
+export function updateShop(id: string, input: UpdateShopInput) {
+  return request<Shop>({ method: 'PUT', url: `/api/Shops/${id}`, data: input })
+}
