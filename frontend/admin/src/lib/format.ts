@@ -30,3 +30,12 @@ export function dushanbeDate(offsetDays = 0): string {
 
   return date.toLocaleDateString('en-CA', { timeZone: TZ })
 }
+
+/** Приводит ввод к виду +992XXXXXXXXX. */
+export function toApiPhone(input: string): string {
+  const digits = input.replace(/\D/g, '')
+
+  if (digits.startsWith('992') && digits.length >= 12) return `+${digits}`
+
+  return `+992${digits}`
+}

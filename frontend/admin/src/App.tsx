@@ -7,6 +7,7 @@ import { PlaceholderPage } from '@/pages/placeholder-page'
 import { OrdersPage } from '@/features/orders/orders-page'
 import { NewOrderPage } from './features/orders/new-order-page'
 import { PlanPage } from './features/products/plan-page'
+import { ShopsPage } from './features/shops/shops-page'
 
 export default function App() {
   return (
@@ -19,7 +20,8 @@ export default function App() {
             <Route index element={<Navigate to="/orders" replace />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="orders/new" element={<NewOrderPage />} />
-            <Route path="plan" element={<PlanPage />} />            <Route path="shops" element={<PlaceholderPage title="Магазины и долги" />} />
+            <Route path="plan" element={<PlanPage />} />
+            <Route path="shops" element={<ShopsPage />} />
             <Route path="products" element={<PlaceholderPage title="Товары" />} />
             <Route path="users" element={<PlaceholderPage title="Пользователи" />} />
             <Route path="settings" element={<PlaceholderPage title="Настройки" />} />
