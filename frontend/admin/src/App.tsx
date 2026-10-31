@@ -3,14 +3,15 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/app-layout'
 import { LoginPage } from '@/features/auth/login-page'
 import { RequireAdmin } from '@/features/auth/require-admin'
-import { PlaceholderPage } from '@/pages/placeholder-page'
+import { NewOrderPage } from '@/features/orders/new-order-page'
+import { OrderPage } from '@/features/orders/order-page'
 import { OrdersPage } from '@/features/orders/orders-page'
-import { NewOrderPage } from './features/orders/new-order-page'
+import { ProductsPage } from '@/features/products/products-page'
+import { SettingsPage } from '@/features/settings/settings-page'
+import { ShopsPage } from '@/features/shops/shops-page'
+import { UsersPage } from '@/features/users/users-page'
+import { NotFoundPage } from '@/pages/not-found-page'
 import { PlanPage } from './features/products/plan-page'
-import { ShopsPage } from './features/shops/shops-page'
-import { SettingsPage } from './features/settings/settings-page'
-import { ProductsPage } from './features/products/products-page'
-import { UsersPage } from './features/users/users-page'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route index element={<Navigate to="/orders" replace />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="orders/new" element={<NewOrderPage />} />
+            <Route path="orders/:id" element={<OrderPage />} />
             <Route path="plan" element={<PlanPage />} />
             <Route path="shops" element={<ShopsPage />} />
             <Route path="products" element={<ProductsPage />} />
@@ -31,7 +33,7 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

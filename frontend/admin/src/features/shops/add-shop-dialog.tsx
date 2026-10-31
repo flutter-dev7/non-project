@@ -1,21 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Store } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError } from '@/lib/api'
 import { toApiPhone } from '@/lib/format'
 
 import { createShop } from './api'
+import { AppDialog } from '@/components/app-dialog'
 
 function Form({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -95,14 +90,14 @@ function Form({ onClose }: { onClose: () => void }) {
 
 export function AddShopDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-extrabold">Новый магазин</DialogTitle>
-          <DialogDescription className="sr-only">Добавление магазина</DialogDescription>
-        </DialogHeader>
-        {open && <Form onClose={onClose} />}
-      </DialogContent>
-    </Dialog>
+    <AppDialog
+      open={open}
+      onClose={onClose}
+      icon={Store}
+      title="Новый магазин"
+      subtitle="Название, адрес и телефон"
+    >
+      {open && <Form onClose={onClose} />}
+    </AppDialog>
   )
 }

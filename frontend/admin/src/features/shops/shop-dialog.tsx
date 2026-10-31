@@ -1,15 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CircleCheck, Loader2, Phone } from 'lucide-react'
+import { CircleCheck, Loader2, Phone, Store } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
+
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import type { PaymentMethod } from '@/features/orders/types'
@@ -19,6 +13,7 @@ import { formatDate, formatDateTime, money, toApiPhone } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 import { fetchShop, fetchShopBalance, setDebtLimit, setShopOwner, updateShop } from './api'
+import { AppDialog } from '@/components/app-dialog'
 
 const methodLabels: Record<PaymentMethod, string> = {
     Cash: 'Наличные',
@@ -519,27 +514,24 @@ function ShopBody({ id }: { id: string }) {
 }
 
 export function ShopDialog({
-    shopId,
-    shopName,
-    onClose,
+  shopId,
+  shopName,
+  onClose,
 }: {
-    shopId: string | null
-    shopName: string
-    onClose: () => void
+  shopId: string | null
+  shopName: string
+  onClose: () => void
 }) {
-    return (
-        <Dialog open={shopId !== null} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
-                {shopId && (
-                    <>
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-extrabold">{shopName}</DialogTitle>
-                            <DialogDescription className="sr-only">Карточка магазина</DialogDescription>
-                        </DialogHeader>
-                        <ShopBody key={shopId} id={shopId} />
-                    </>
-                )}
-            </DialogContent>
-        </Dialog>
-    )
+  return (
+    <AppDialog
+      open={shopId !== null}
+      onClose={onClose}
+      icon={Store}
+      title={shopName}
+      subtitle="Карточка магазина"
+      wide
+    >
+      {shopId && <ShopBody key={shopId} id={shopId} />}
+    </AppDialog>
+  )
 }

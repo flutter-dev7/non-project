@@ -48,3 +48,13 @@ export function useStatusCounts(dateFrom: string, dateTo: string) {
 
   return counts
 }
+
+export function useNewOrdersCount() {
+  return useQuery({
+    queryKey: ['orders', 'count', 'New', '', ''],
+    queryFn: () =>
+      fetchOrders({ status: 'New', dateFrom: '', dateTo: '', page: 1, pageSize: 1 }),
+    select: (data) => data.totalCount,
+    refetchInterval: 30_000,
+  })
+}

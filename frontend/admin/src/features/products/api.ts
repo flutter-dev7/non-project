@@ -54,3 +54,10 @@ export function createProduct(input: ProductInput) {
 export function updateProduct(id: string, input: ProductInput & { isActive: boolean }) {
   return request<Product>({ method: 'PUT', url: `/api/Products/${id}`, data: input })
 }
+
+export function uploadProductImage(file: File) {
+  const form = new FormData()
+  form.append('file', file)
+
+  return request<string>({ method: 'POST', url: '/api/Uploads/product-image', data: form })
+}

@@ -20,7 +20,6 @@ import { dushanbeDate, formatDate, formatDateTime, money } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 import { useOrders, useStatusCounts } from './hooks'
-import { OrderDetailsDialog } from './order-details-dialog'
 import { StatusBadge } from './status-badge'
 import {
     ORDER_STATUSES,
@@ -205,7 +204,6 @@ export function OrdersPage() {
     const [dateFrom, setDateFrom] = useState('')
     const [dateTo, setDateTo] = useState('')
     const [page, setPage] = useState(1)
-    const [openId, setOpenId] = useState<string | null>(null)
     const navigate = useNavigate()
 
     const { data, isLoading, isFetching, error, refetch } = useOrders({
@@ -384,7 +382,7 @@ export function OrdersPage() {
 
                                 {!isLoading &&
                                     orders.map((order) => (
-                                        <OrderRow key={order.id} order={order} onOpen={() => setOpenId(order.id)} />
+                                        <OrderRow key={order.id} order={order} onOpen={() => navigate(`/orders/${order.id}`)} />
                                     ))}
                             </tbody>
                         </table>
@@ -435,7 +433,6 @@ export function OrdersPage() {
                 </div>
             )}
 
-            <OrderDetailsDialog orderId={openId} onClose={() => setOpenId(null)} />
         </div>
     )
 }

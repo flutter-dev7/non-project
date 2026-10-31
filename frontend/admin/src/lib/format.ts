@@ -39,3 +39,16 @@ export function toApiPhone(input: string): string {
 
   return `+992${digits}`
 }
+
+export function formatShortDateTime(iso: string): string {
+  const hasZone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso)
+  const date = new Date(hasZone ? iso : `${iso}Z`)
+
+  return date.toLocaleString('ru-RU', {
+    timeZone: TZ,
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}

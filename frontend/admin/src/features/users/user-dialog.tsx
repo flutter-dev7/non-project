@@ -1,15 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Info, Loader2 } from 'lucide-react'
+import { Info, Loader2, UserCog, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NativeSelect } from '@/components/ui/native-select'
@@ -26,6 +20,7 @@ import {
   type UserDetails,
   type UserRole,
 } from './api'
+import { AppDialog } from '@/components/app-dialog'
 
 function RoleSelect({ value, onChange }: { value: UserRole; onChange: (role: UserRole) => void }) {
   return (
@@ -296,19 +291,18 @@ export function UserDialog({
   target: UserDialogTarget | null
   onClose: () => void
 }) {
-  return (
-    <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-extrabold">
-            {target?.mode === 'edit' ? 'Редактирование пользователя' : 'Новый пользователь'}
-          </DialogTitle>
-          <DialogDescription className="sr-only">Форма пользователя</DialogDescription>
-        </DialogHeader>
+  const isEdit = target?.mode === 'edit'
 
-        {target?.mode === 'create' && <CreateForm onClose={onClose} />}
-        {target?.mode === 'edit' && <EditForm key={target.id} id={target.id} onClose={onClose} />}
-      </DialogContent>
-    </Dialog>
+  return (
+    <AppDialog
+      open={target !== null}
+      onClose={onClose}
+      icon={isEdit ? UserCog : UserPlus}
+      title={isEdit ? 'Редактирование пользователя' : 'Новый пользователь'}
+      subtitle={isEdit ? 'Данные, роль и доступ' : 'Курьер, агент, администратор или магазин'}
+    >
+      {target?.mode === 'create' && <CreateForm onClose={onClose} />}
+      {target?.mode === 'edit' && <EditForm key={target.id} id={target.id} onClose={onClose} />}
+    </AppDialog>
   )
 }

@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Non.API.Http;
 using Non.API.Middleware;
@@ -14,6 +15,7 @@ using Non.Domain.Enums;
 using Non.Infrastructure;
 using Non.Infrastructure.Persistence.Data;
 using Non.Infrastructure.Persistence.Seeds;
+using Non.Infrastructure.Services;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
@@ -140,6 +142,13 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod());
 });
 
+var uploadsPath = builder.Configuration["Storage:UploadsPath"]
+                  ?? Path.Combine(builder.Environment.ContentRootPath, "uploads");
+
+Directory.CreateDirectory(uploadsPath);
+
+builder.Services.AddSingleton<IImageStorage>(new LocalImageStorage(uploadsPath));
+
 var app = builder.Build();
 
 await DbSeeder.SeedAsync(app.Services);
@@ -160,6 +169,11 @@ app.UseHttpsRedirection();
 
 app.UseRateLimiter();
 app.UseCors("Admin");
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
 app.UseAuthentication();
 app.UseAuthorization();
 
